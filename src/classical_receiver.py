@@ -1,6 +1,12 @@
 import torch
 
-from src.channel import add_awgn, apply_multipath, channel_frequency_response, generate_rayleigh_taps
+from src.channel import (
+    add_awgn,
+    apply_multipath,
+    channel_frequency_response,
+    generate_rayleigh_taps,
+    generate_tdl_a_taps,
+)
 from src.demapper import bits_to_qam16, qam16_to_bits
 from src.equalization import mmse_equalize, zf_equalize
 from src.estimation import interpolate_channel, ls_channel_estimate
@@ -26,6 +32,7 @@ def simulate_received_frame(cfg: dict, snr_db: float) -> dict:
     n_p = cfg["ofdm"]["n_pilot_subcarriers"]
     exp_decay = cfg["channel"].get("exp_decay", 0.7)
     n_taps = cfg["channel"]["n_taps"]
+    channel_model = str(cfg.get("channel", {}).get("model", "rayleigh")).lower()
 
     device = _get_device(cfg)
 
@@ -39,7 +46,10 @@ def simulate_received_frame(cfg: dict, snr_db: float) -> dict:
     tx_grid = build_ofdm_grid(data_symbols, n_sc, n_sym, pilot_idx)
     tx_time = ofdm_modulate(tx_grid, cp)
 
-    taps = generate_rayleigh_taps(n_taps, exp_decay, device)
+    if channel_model == "tdl_a":
+        taps = generate_tdl_a_taps(n_taps, device)
+    else:
+        taps = generate_rayleigh_taps(n_taps, exp_decay, device)
     rx_time = apply_multipath(tx_time, taps)
     rx_time, noise_power = add_awgn(rx_time, snr_db)
 

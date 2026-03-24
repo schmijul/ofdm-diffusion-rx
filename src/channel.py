@@ -10,6 +10,24 @@ def generate_rayleigh_taps(n_taps: int, exp_decay: float, device: torch.device) 
     return (real + 1j * imag).to(torch.complex64)
 
 
+def generate_tdl_a_taps(n_taps: int, device: torch.device) -> torch.Tensor:
+    # Compact TDL-A style power profile approximation (first taps only).
+    # Relative powers in dB (truncated profile): [0, -2.2, -4.0, -6.0, -8.2, -10.5, -13.5, -16.0]
+    base_db = torch.tensor([0.0, -2.2, -4.0, -6.0, -8.2, -10.5, -13.5, -16.0], device=device)
+    if n_taps <= base_db.numel():
+        p_db = base_db[:n_taps]
+    else:
+        extra = torch.linspace(-18.0, -24.0, n_taps - base_db.numel(), device=device)
+        p_db = torch.cat([base_db, extra], dim=0)
+
+    power = 10.0 ** (p_db / 10.0)
+    power = power / power.sum()
+    std = torch.sqrt(power / 2.0)
+    real = torch.randn(n_taps, device=device) * std
+    imag = torch.randn(n_taps, device=device) * std
+    return (real + 1j * imag).to(torch.complex64)
+
+
 def apply_multipath(x: torch.Tensor, taps: torch.Tensor) -> torch.Tensor:
     # x: [n_symbols, n_time]
     n_symbols, n_time = x.shape

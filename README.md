@@ -350,6 +350,10 @@ Implemented so far:
 - Unit tests for classical baseline, dataset generation, and diffusion shape/schedule sanity
 - Fair-evaluation flow where LS/ZF, LS/MMSE, and Perfect-CSI/MMSE are computed on the same received frame
 - Warm-start diffusion refinement using residual-variance-aware timestep selection (SNR prior + empirical nearest-constellation residual)
+- `inference_steps` is now active during reverse denoising (subsampled reverse timeline)
+- Evaluation CSV now logs both BER and SER per method
+- Constellation plots can include an `After Diffusion` panel when a checkpoint is available
+- Channel `model` switch now supports both `rayleigh` and a compact `tdl_a` profile
 
 Living-document rule:
 

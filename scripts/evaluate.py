@@ -10,11 +10,12 @@ if str(ROOT) not in sys.path:
 import torch
 
 from src.classical_receiver import run_receiver_on_frame, simulate_received_frame
-from src.demapper import qam16_to_bits
+from src.demapper import bits_to_qam16, qam16_to_bits
 from src.diffusion.ddpm import DDPM
 from src.diffusion.model import ResidualMLPDenoiser
 from src.diffusion.noise_schedule import NoiseSchedule
 from src.metrics import bit_error_rate
+from src.utils import real_to_complex
 from src.utils import get_device, load_config, set_seed
 
 
@@ -56,7 +57,7 @@ def load_diffusion(cfg: dict, checkpoint: Path, device: torch.device):
         beta_end=float(cfg["diffusion"]["beta_end"]),
         schedule=str(cfg["diffusion"]["schedule"]),
     )
-    return DDPM(model, schedule, device)
+    return DDPM(model, schedule, device, inference_steps=int(cfg["diffusion"]["inference_steps"]))
 
 
 def main():
@@ -71,13 +72,19 @@ def main():
     n_frames = args.n_frames or int(cfg["evaluation"]["n_test_frames"])
     ddpm = load_diffusion(cfg, Path(args.checkpoint), device)
 
-    rows = ["snr_db,ls_zf,ls_mmse,perfect_mmse,diffusion_mmse"]
+    rows = [
+        "snr_db,ls_zf_ber,ls_mmse_ber,perfect_mmse_ber,diffusion_mmse_ber,ls_zf_ser,ls_mmse_ser,perfect_mmse_ser,diffusion_mmse_ser"
+    ]
 
     for snr_db in snr_grid(cfg):
         zf_ber = []
         mmse_ber = []
         genie_ber = []
         diff_ber = []
+        zf_ser = []
+        mmse_ser = []
+        genie_ser = []
+        diff_ser = []
 
         for _ in range(n_frames):
             frame = simulate_received_frame(cfg, snr_db=snr_db)
@@ -88,6 +95,12 @@ def main():
             zf_ber.append(out_zf["ber"])
             mmse_ber.append(out_mmse["ber"])
             genie_ber.append(out_genie["ber"])
+            sym_zf = bits_to_qam16(out_zf["bits_rx"].long())
+            sym_mmse = bits_to_qam16(out_mmse["bits_rx"].long())
+            sym_genie = bits_to_qam16(out_genie["bits_rx"].long())
+            zf_ser.append(float((sym_zf != out_zf["tx_symbols"]).float().mean().item()))
+            mmse_ser.append(float((sym_mmse != out_mmse["tx_symbols"]).float().mean().item()))
+            genie_ser.append(float((sym_genie != out_genie["tx_symbols"]).float().mean().item()))
 
             if ddpm is not None:
                 x_eq = out_mmse["equalized_symbols"].to(device)
@@ -95,17 +108,27 @@ def main():
                 snr_tensor = torch.full((x_eq_real.shape[0], 1), snr_db, device=device)
                 with torch.no_grad():
                     x_dn = ddpm.denoise_from_equalized(x_eq_real, snr_tensor)
-                x_dn_complex = x_dn[:, 0].cpu() + 1j * x_dn[:, 1].cpu()
+                x_dn_complex = real_to_complex(x_dn.cpu())
                 bits_dn = qam16_to_bits(x_dn_complex)
                 diff_ber.append(bit_error_rate(out_mmse["bits_tx"].long(), bits_dn.long()))
+                sym_dn = bits_to_qam16(bits_dn.long())
+                diff_ser.append(float((sym_dn != out_mmse["tx_symbols"]).float().mean().item()))
 
         m_zf = sum(zf_ber) / len(zf_ber)
         m_mmse = sum(mmse_ber) / len(mmse_ber)
         m_genie = sum(genie_ber) / len(genie_ber)
         m_diff = (sum(diff_ber) / len(diff_ber)) if diff_ber else float("nan")
+        s_zf = sum(zf_ser) / len(zf_ser)
+        s_mmse = sum(mmse_ser) / len(mmse_ser)
+        s_genie = sum(genie_ser) / len(genie_ser)
+        s_diff = (sum(diff_ser) / len(diff_ser)) if diff_ser else float("nan")
 
-        rows.append(f"{snr_db},{m_zf},{m_mmse},{m_genie},{m_diff}")
-        print(f"snr={snr_db:.1f} zf={m_zf:.4e} mmse={m_mmse:.4e} genie={m_genie:.4e} diff={m_diff:.4e}")
+        rows.append(f"{snr_db},{m_zf},{m_mmse},{m_genie},{m_diff},{s_zf},{s_mmse},{s_genie},{s_diff}")
+        print(
+            f"snr={snr_db:.1f} "
+            f"ber[zf={m_zf:.4e}, mmse={m_mmse:.4e}, genie={m_genie:.4e}, diff={m_diff:.4e}] "
+            f"ser[zf={s_zf:.4e}, mmse={s_mmse:.4e}, genie={s_genie:.4e}, diff={s_diff:.4e}]"
+        )
 
     (outdir / "ber_results.csv").write_text("\n".join(rows) + "\n", encoding="utf-8")
 

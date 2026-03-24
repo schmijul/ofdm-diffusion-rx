@@ -5,10 +5,11 @@ from src.diffusion.noise_schedule import NoiseSchedule
 
 
 class DDPM:
-    def __init__(self, model, schedule: NoiseSchedule, device: torch.device):
+    def __init__(self, model, schedule: NoiseSchedule, device: torch.device, inference_steps: int | None = None):
         self.model = model
         self.schedule = schedule.to(device)
         self.device = device
+        self.inference_steps = int(inference_steps) if inference_steps is not None else self.schedule.n_timesteps
 
     def q_sample(self, x0: torch.Tensor, t: torch.Tensor, noise: torch.Tensor | None = None) -> tuple[torch.Tensor, torch.Tensor]:
         if noise is None:
@@ -49,7 +50,12 @@ class DDPM:
 
         x = x_eq.clone()
         t0 = int(torch.max(t_start).item())
-        for t in range(t0, -1, -1):
+        steps = min(max(self.inference_steps, 1), t0 + 1)
+        t_seq = torch.linspace(t0, 0, steps=steps, device=x.device).round().to(torch.long)
+        t_seq = torch.unique_consecutive(t_seq)
+
+        for t_tensor in t_seq:
+            t = int(t_tensor.item())
             active = t_start >= t
             if not torch.any(active):
                 continue
