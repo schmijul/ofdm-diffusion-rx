@@ -25,3 +25,17 @@ def test_ddpm_shapes_and_sampling():
 
     x_dn = ddpm.denoise_from_equalized(x0, snr)
     assert x_dn.shape == x0.shape
+
+
+def test_residual_variance_estimator_positive():
+    x_eq = torch.tensor(
+        [
+            [0.95 / (10.0**0.5), 1.02 / (10.0**0.5)],
+            [3.3 / (10.0**0.5), -2.7 / (10.0**0.5)],
+            [-1.2 / (10.0**0.5), -0.8 / (10.0**0.5)],
+        ],
+        dtype=torch.float32,
+    )
+    sigma2 = DDPM.estimate_residual_variance(x_eq)
+    assert sigma2.shape == (3,)
+    assert torch.all(sigma2 > 0.0)

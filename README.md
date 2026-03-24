@@ -341,6 +341,8 @@ Implemented so far:
 - Phase 3 diffusion core modules (noise schedule, residual MLP denoiser, DDPM process)
 - Scripts scaffolded for training, evaluation, and plotting
 - Unit tests for classical baseline, dataset generation, and diffusion shape/schedule sanity
+- Fair-evaluation flow where LS/ZF, LS/MMSE, and Perfect-CSI/MMSE are computed on the same received frame
+- Warm-start diffusion refinement using residual-variance-aware timestep selection (SNR prior + empirical nearest-constellation residual)
 
 Living-document rule:
 

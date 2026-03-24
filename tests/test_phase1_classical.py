@@ -2,7 +2,7 @@ import copy
 
 import torch
 
-from src.classical_receiver import run_classical_frame
+from src.classical_receiver import run_classical_frame, run_receiver_on_frame, simulate_received_frame
 from src.demapper import bits_to_qam16, qam16_to_bits
 from src.estimation import interpolate_channel, ls_channel_estimate
 from src.ofdm import get_pilot_indices
@@ -69,3 +69,18 @@ def test_baseline_ordering_average_ber():
     assert genie_mean <= mmse_mean
     # LS interpolation errors can make MMSE vs ZF close; allow small tolerance.
     assert mmse_mean <= zf_mean + 0.06
+
+
+def test_methods_share_bits_on_same_frame():
+    set_seed(5)
+    cfg = load_config()
+    cfg = copy.deepcopy(cfg)
+    cfg["ofdm"]["n_ofdm_symbols"] = 4
+
+    frame = simulate_received_frame(cfg, snr_db=8.0)
+    out_zf = run_receiver_on_frame(frame, method="ls_zf", perfect_csi=False)
+    out_mmse = run_receiver_on_frame(frame, method="ls_mmse", perfect_csi=False)
+    out_genie = run_receiver_on_frame(frame, method="perfect_mmse", perfect_csi=True)
+
+    assert torch.equal(out_zf["bits_tx"], out_mmse["bits_tx"])
+    assert torch.equal(out_zf["bits_tx"], out_genie["bits_tx"])

@@ -9,7 +9,7 @@ if str(ROOT) not in sys.path:
 
 import torch
 
-from src.classical_receiver import run_classical_frame
+from src.classical_receiver import run_receiver_on_frame, simulate_received_frame
 from src.demapper import qam16_to_bits
 from src.diffusion.ddpm import DDPM
 from src.diffusion.model import ResidualMLPDenoiser
@@ -80,9 +80,10 @@ def main():
         diff_ber = []
 
         for _ in range(n_frames):
-            out_zf = run_classical_frame(cfg, snr_db=snr_db, method="ls_zf", perfect_csi=False)
-            out_mmse = run_classical_frame(cfg, snr_db=snr_db, method="ls_mmse", perfect_csi=False)
-            out_genie = run_classical_frame(cfg, snr_db=snr_db, method="perfect_mmse", perfect_csi=True)
+            frame = simulate_received_frame(cfg, snr_db=snr_db)
+            out_zf = run_receiver_on_frame(frame, method="ls_zf", perfect_csi=False)
+            out_mmse = run_receiver_on_frame(frame, method="ls_mmse", perfect_csi=False)
+            out_genie = run_receiver_on_frame(frame, method="perfect_mmse", perfect_csi=True)
 
             zf_ber.append(out_zf["ber"])
             mmse_ber.append(out_mmse["ber"])

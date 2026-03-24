@@ -42,12 +42,31 @@ class DDPM:
 
     @torch.no_grad()
     def denoise_from_equalized(self, x_eq: torch.Tensor, snr_db: torch.Tensor) -> torch.Tensor:
-        snr_linear = 10.0 ** (snr_db / 10.0)
-        sigma2 = (1.0 / snr_linear).squeeze(1)
+        sigma2_snr = (1.0 / (10.0 ** (snr_db / 10.0))).squeeze(1)
+        sigma2_emp = self.estimate_residual_variance(x_eq)
+        sigma2 = torch.maximum(sigma2_snr, sigma2_emp)
         t_start = self.schedule.timestep_from_sigma2(sigma2)
 
-        x = x_eq
+        x = x_eq.clone()
         t0 = int(torch.max(t_start).item())
         for t in range(t0, -1, -1):
-            x = self.p_sample(x, t, snr_db)
+            active = t_start >= t
+            if not torch.any(active):
+                continue
+            x_active = self.p_sample(x[active], t, snr_db[active])
+            x[active] = x_active
         return x
+
+    @staticmethod
+    def estimate_residual_variance(x_eq: torch.Tensor) -> torch.Tensor:
+        # Nearest hard decision to normalized 16-QAM on each axis.
+        levels = torch.tensor([-3.0, -1.0, 1.0, 3.0], device=x_eq.device, dtype=x_eq.dtype) / (10.0**0.5)
+        xr = x_eq[:, 0].unsqueeze(1)
+        xi = x_eq[:, 1].unsqueeze(1)
+        i_hat = levels[torch.argmin(torch.abs(xr - levels.unsqueeze(0)), dim=1)]
+        q_hat = levels[torch.argmin(torch.abs(xi - levels.unsqueeze(0)), dim=1)]
+        x_hd = torch.stack([i_hat, q_hat], dim=1)
+
+        resid = x_eq - x_hd
+        sigma2 = torch.sum(resid * resid, dim=1).clamp_min(1e-6)
+        return sigma2
