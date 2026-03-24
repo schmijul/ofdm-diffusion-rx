@@ -25,7 +25,7 @@ def _get_device(cfg: dict) -> torch.device:
     return torch.device("cuda" if use_cuda else "cpu")
 
 
-def simulate_received_frame(cfg: dict, snr_db: float) -> dict:
+def simulate_received_frame(cfg: dict, snr_db: float, bits_tx: torch.Tensor | None = None) -> dict:
     n_sc = cfg["ofdm"]["n_subcarriers"]
     cp = cfg["ofdm"]["cp_length"]
     n_sym = cfg["ofdm"]["n_ofdm_symbols"]
@@ -40,7 +40,13 @@ def simulate_received_frame(cfg: dict, snr_db: float) -> dict:
     data_idx = get_data_indices(n_sc, pilot_idx)
     n_data = data_idx.numel() * n_sym
 
-    bits_tx = torch.randint(0, 2, (n_data * 4,), device=device)
+    n_bits_frame = n_data * 4
+    if bits_tx is None:
+        bits_tx = torch.randint(0, 2, (n_bits_frame,), device=device)
+    else:
+        bits_tx = bits_tx.to(device).long().reshape(-1)
+        if bits_tx.numel() != n_bits_frame:
+            raise ValueError(f"Expected {n_bits_frame} bits for one frame, got {bits_tx.numel()}")
     data_symbols = bits_to_qam16(bits_tx)
 
     tx_grid = build_ofdm_grid(data_symbols, n_sc, n_sym, pilot_idx)
@@ -110,6 +116,12 @@ def run_receiver_on_frame(frame: dict, method: str = "ls_mmse", perfect_csi: boo
     }
 
 
-def run_classical_frame(cfg: dict, snr_db: float, method: str = "ls_mmse", perfect_csi: bool = False) -> dict:
-    frame = simulate_received_frame(cfg, snr_db)
+def run_classical_frame(
+    cfg: dict,
+    snr_db: float,
+    method: str = "ls_mmse",
+    perfect_csi: bool = False,
+    bits_tx: torch.Tensor | None = None,
+) -> dict:
+    frame = simulate_received_frame(cfg, snr_db, bits_tx=bits_tx)
     return run_receiver_on_frame(frame, method=method, perfect_csi=perfect_csi)

@@ -334,6 +334,7 @@ Convenient local commands:
 - `make smoke` for a tiny end-to-end train/evaluate/plot run
 - `make train`, `make evaluate`, `make plot` for default full workflow
 - `make benchmark` for multi-seed BER benchmarking with uncertainty stats
+- `make text-benchmark TEXT=path/to/test.txt` for real text transmission benchmarking
 - `make help` to list all shortcuts
 
 Automation status:
@@ -341,6 +342,11 @@ Automation status:
 - GitHub Actions CI is configured to run on every push and pull request.
 - CI has two jobs: fast unit tests (`pytest -q`) and a smoke end-to-end pipeline (`train -> evaluate -> plot` with `config/smoke.yaml`).
 - Smoke artifacts are uploaded in CI so plots/CSVs can be inspected without rerunning locally.
+
+Text-data safety guardrail:
+
+- Text benchmarking supports explicit train/test disjoint checks using SHA256 file hashes.
+- If the test `.txt` matches any train text passed to the script, the run fails fast with a leakage error.
 
 ## 12. Current Status
 
