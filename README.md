@@ -328,6 +328,13 @@ Engineering rules:
 - Keep modules small and testable.
 - Prefer explicit interfaces and reproducible experiments over hidden magic.
 
+Convenient local commands:
+
+- `make quick-test` for fast unit-test validation
+- `make smoke` for a tiny end-to-end train/evaluate/plot run
+- `make train`, `make evaluate`, `make plot` for default full workflow
+- `make help` to list all shortcuts
+
 ## 12. Current Status
 
 This repository now includes an active implementation baseline, and this README is maintained as a living companion to each milestone.
