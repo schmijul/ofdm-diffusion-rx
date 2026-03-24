@@ -84,3 +84,13 @@ def test_methods_share_bits_on_same_frame():
 
     assert torch.equal(out_zf["bits_tx"], out_mmse["bits_tx"])
     assert torch.equal(out_zf["bits_tx"], out_genie["bits_tx"])
+
+
+def test_cyclic_interpolation_handles_band_edge():
+    n_sc = 8
+    pilot_idx = torch.tensor([0, 4], dtype=torch.long)
+    h_p = torch.tensor([[0.0 + 0.0j, 4.0 + 0.0j]], dtype=torch.complex64)
+    h_full = interpolate_channel(h_p, pilot_idx, n_sc)
+
+    # Between k=4 and k=0 (wrapped via k=8), interpolation should decrease linearly: k=6 -> 2.
+    assert torch.isclose(h_full[0, 6].real, torch.tensor(2.0), atol=1e-4)

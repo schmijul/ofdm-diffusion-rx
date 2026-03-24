@@ -333,6 +333,7 @@ Convenient local commands:
 - `make quick-test` for fast unit-test validation
 - `make smoke` for a tiny end-to-end train/evaluate/plot run
 - `make train`, `make evaluate`, `make plot` for default full workflow
+- `make benchmark` for multi-seed BER benchmarking with uncertainty stats
 - `make help` to list all shortcuts
 
 Automation status:
@@ -361,6 +362,8 @@ Implemented so far:
 - Constellation plots can include an `After Diffusion` panel when a checkpoint is available
 - Channel `model` switch now supports both `rayleigh` and a compact `tdl_a` profile
 - Plot pipeline now outputs both `ber_vs_snr.*` and `ser_vs_snr.*`
+- LS channel interpolation uses cyclic (band-edge aware) interpolation to reduce OFDM edge bias
+- `scripts/benchmark.py` adds multi-seed benchmarking with per-SNR mean/std and diffusion-vs-MMSE delta reporting
 
 Living-document rule:
 

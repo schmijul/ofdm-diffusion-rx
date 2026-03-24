@@ -3,8 +3,9 @@ VENV_PIP := .venv/bin/pip
 PYTEST := .venv/bin/pytest
 SMOKE_OUT := results/smoke_make
 FULL_OUT := results/full
+BENCH_OUT := results/benchmark
 
-.PHONY: help venv install quick-test test smoke train evaluate plot clean
+.PHONY: help venv install quick-test test smoke train evaluate plot benchmark clean
 
 help:
 	@echo "Targets:"
@@ -16,6 +17,7 @@ help:
 	@echo "  make train       - train with default config"
 	@echo "  make evaluate    - evaluate with default config"
 	@echo "  make plot        - generate plots from default eval CSV"
+	@echo "  make benchmark   - multi-seed BER benchmark summary"
 	@echo "  make clean       - remove smoke/full result folders"
 
 venv:
@@ -45,5 +47,8 @@ evaluate:
 plot:
 	$(VENV_PY) scripts/plot_results.py --config config/default.yaml --csv $(FULL_OUT)/ber_results.csv --outdir $(FULL_OUT)
 
+benchmark:
+	$(VENV_PY) scripts/benchmark.py --config config/default.yaml --checkpoint $(FULL_OUT)/best_model.pt --outdir $(BENCH_OUT) --n-frames 200 --seeds 11,22,33
+
 clean:
-	rm -rf $(SMOKE_OUT) $(FULL_OUT)
+	rm -rf $(SMOKE_OUT) $(FULL_OUT) $(BENCH_OUT)

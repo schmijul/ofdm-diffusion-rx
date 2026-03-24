@@ -25,28 +25,19 @@ def interpolate_channel(
         h_real = h_pilots[s].real
         h_imag = h_pilots[s].imag
 
-        hr = torch.empty_like(x)
-        hi = torch.empty_like(x)
+        # OFDM channel response is periodic over subcarriers; use cyclic linear interpolation.
+        xp_ext = torch.cat([xp[-1:] - n_subcarriers, xp, xp[:1] + n_subcarriers], dim=0)
+        hr_ext = torch.cat([h_real[-1:], h_real, h_real[:1]], dim=0)
+        hi_ext = torch.cat([h_imag[-1:], h_imag, h_imag[:1]], dim=0)
 
-        # Piecewise linear interpolation with boundary clamping.
-        for i in range(n_subcarriers):
-            xi = x[i]
-            if xi <= xp[0]:
-                hr[i] = h_real[0]
-                hi[i] = h_imag[0]
-                continue
-            if xi >= xp[-1]:
-                hr[i] = h_real[-1]
-                hi[i] = h_imag[-1]
-                continue
+        right = torch.searchsorted(xp_ext, x, right=True)
+        left = right - 1
 
-            right = torch.searchsorted(xp, xi, right=False)
-            left = right - 1
-            x0 = xp[left]
-            x1 = xp[right]
-            w = (xi - x0) / (x1 - x0)
-            hr[i] = (1.0 - w) * h_real[left] + w * h_real[right]
-            hi[i] = (1.0 - w) * h_imag[left] + w * h_imag[right]
+        x0 = xp_ext[left]
+        x1 = xp_ext[right]
+        w = (x - x0) / (x1 - x0)
+        hr = (1.0 - w) * hr_ext[left] + w * hr_ext[right]
+        hi = (1.0 - w) * hi_ext[left] + w * hi_ext[right]
 
         h_full[s] = hr + 1j * hi
 
