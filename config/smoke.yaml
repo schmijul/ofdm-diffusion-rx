@@ -1,0 +1,49 @@
+seed: 42
+
+device:
+  prefer_cuda: false
+
+ofdm:
+  n_subcarriers: 32
+  cp_length: 8
+  n_pilot_subcarriers: 4
+  pilot_pattern: comb
+  n_ofdm_symbols: 4
+
+modulation:
+  order: 16
+
+channel:
+  model: rayleigh
+  n_taps: 4
+  max_delay_spread: 5.0e-6
+  doppler_hz: 0.0
+  exp_decay: 0.7
+
+snr_range_db: [0.0, 5.0]
+snr_step_db: 5.0
+
+training:
+  snr_train_range_db: [0.0, 10.0]
+  n_train_samples: 512
+  n_val_samples: 128
+  batch_size: 64
+  epochs: 1
+  lr: 1.0e-4
+  optimizer: adam
+
+diffusion:
+  n_timesteps: 12
+  beta_start: 1.0e-4
+  beta_end: 0.02
+  schedule: linear
+  inference_steps: 12
+  model:
+    type: residual_mlp
+    hidden_dim: 64
+    n_res_blocks: 2
+    time_embedding_dim: 32
+
+evaluation:
+  n_test_frames: 2
+  constellation_snrs_db: [0.0, 5.0]

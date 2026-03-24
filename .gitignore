@@ -1,2 +1,5 @@
 plan.md
 .venv/
+results/
+__pycache__/
+*.pyc
