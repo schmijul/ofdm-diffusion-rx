@@ -335,6 +335,12 @@ Convenient local commands:
 - `make train`, `make evaluate`, `make plot` for default full workflow
 - `make help` to list all shortcuts
 
+Automation status:
+
+- GitHub Actions CI is configured to run on every push and pull request.
+- CI has two jobs: fast unit tests (`pytest -q`) and a smoke end-to-end pipeline (`train -> evaluate -> plot` with `config/smoke.yaml`).
+- Smoke artifacts are uploaded in CI so plots/CSVs can be inspected without rerunning locally.
+
 ## 12. Current Status
 
 This repository now includes an active implementation baseline, and this README is maintained as a living companion to each milestone.
@@ -354,6 +360,7 @@ Implemented so far:
 - Evaluation CSV now logs both BER and SER per method
 - Constellation plots can include an `After Diffusion` panel when a checkpoint is available
 - Channel `model` switch now supports both `rayleigh` and a compact `tdl_a` profile
+- Plot pipeline now outputs both `ber_vs_snr.*` and `ser_vs_snr.*`
 
 Living-document rule:
 

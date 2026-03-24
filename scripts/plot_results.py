@@ -60,6 +60,31 @@ def plot_ber(rows, outdir: Path):
     plt.close()
 
 
+def plot_ser(rows, outdir: Path):
+    snr = [float(r["snr_db"]) for r in rows]
+    ls_zf = [float(r["ls_zf_ser"]) for r in rows]
+    ls_mmse = [float(r["ls_mmse_ser"]) for r in rows]
+    genie = [float(r["perfect_mmse_ser"]) for r in rows]
+    diff = [float(r["diffusion_mmse_ser"]) for r in rows]
+
+    plt.figure(figsize=(7, 4.6))
+    plt.semilogy(snr, ls_zf, marker="o", label="LS+ZF")
+    plt.semilogy(snr, ls_mmse, marker="s", label="LS+MMSE")
+    plt.semilogy(snr, genie, marker="^", label="PerfectCSI+MMSE")
+    if not all(torch.isnan(torch.tensor(diff))):
+        plt.semilogy(snr, diff, marker="d", label="Diffusion+MMSE")
+
+    plt.xlabel("SNR [dB]")
+    plt.ylabel("SER")
+    plt.title("SER vs SNR")
+    plt.grid(True, which="both", alpha=0.3)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(outdir / "ser_vs_snr.png", dpi=160)
+    plt.savefig(outdir / "ser_vs_snr.pdf")
+    plt.close()
+
+
 def load_diffusion(cfg: dict, checkpoint: Path):
     if not checkpoint.exists():
         return None
@@ -134,6 +159,7 @@ def main():
     rows = load_csv(Path(args.csv))
     ddpm = load_diffusion(cfg, Path(args.checkpoint))
     plot_ber(rows, outdir)
+    plot_ser(rows, outdir)
     plot_constellations(cfg, outdir, ddpm)
 
 
