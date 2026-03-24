@@ -45,6 +45,18 @@ At a high level, one frame follows:
 8. Hard demapping returns bits for BER/SER.
 9. Optional diffusion denoiser refines MMSE-equalized symbols before demapping.
 
+Signal-chain sketch used in this repo:
+
+![OFDM Signal Chain](imgs/ofdm_signal_chain.svg)
+
+How to read this diagram in implementation terms:
+
+- Left-to-right blocks map directly to the execution flow in `src/classical_receiver.py`.
+- OFDM waveform handling corresponds to `src/ofdm.py`.
+- Channel and noise blocks correspond to `src/channel.py`.
+- Estimation and equalization blocks correspond to `src/estimation.py` and `src/equalization.py`.
+- The post-equalization ML refinement stage maps to `src/diffusion/` modules.
+
 ### 2.2 Scope (v1)
 
 - Modulation: 16-QAM
@@ -208,6 +220,17 @@ Chosen architecture:
 - SNR FiLM conditioning
 - output predicts `epsilon` in two channels
 
+Model sketch used in this repo:
+
+![Residual MLP Denoiser](imgs/residual_mlp_denoiser_architecture.svg)
+
+How this diagram maps to code:
+
+- Time embedding and conditioning flow map to `src/diffusion/model.py`.
+- Diffusion forward/reverse equations map to `src/diffusion/ddpm.py`.
+- Beta/alpha schedule handling maps to `src/diffusion/noise_schedule.py`.
+- The model consumes `[Re, Im]` plus conditioning and predicts noise in the same 2D real space.
+
 ### 7.2 Conditioning Strategy
 
 Denoising strength depends on SNR; low-SNR samples need stronger denoising.
@@ -307,15 +330,22 @@ Engineering rules:
 
 ## 12. Current Status
 
-At the current stage, this repository starts from project planning and architecture definition.
-Implementation follows the phased approach above.
+This repository now includes an active implementation baseline, and this README is maintained as a living companion to each milestone.
 
-This README intentionally documents both:
+Implemented so far:
 
-- the communication/system theory behind the approach
-- the concrete implementation logic that will be built in code
+- `requirements.txt` with core dependencies (`torch`, `numpy`, `matplotlib`, `PyYAML`, `tqdm`, `pytest`)
+- `config/default.yaml` as the single source of experiment configuration
+- Phase 1 core modules for OFDM, channel simulation, LS estimation, ZF/MMSE equalization, demapping, and classical receiver orchestration
+- Phase 2 dataset generation module for `(equalized_symbol, clean_symbol, snr_db)` pairs
+- Phase 3 diffusion core modules (noise schedule, residual MLP denoiser, DDPM process)
+- Scripts scaffolded for training, evaluation, and plotting
+- Unit tests for classical baseline, dataset generation, and diffusion shape/schedule sanity
 
-so future contributors can understand the "why" and "how" together.
+Living-document rule:
+
+- Every major implementation step is explained here in terms of both theory and code logic.
+- Changes to `requirements.txt` and `config/default.yaml` are documented here whenever they affect reproducibility or behavior.
 
 ## 13. References
 
