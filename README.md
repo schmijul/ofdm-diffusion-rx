@@ -387,6 +387,10 @@ Living-document rule:
 
 One key question was whether we can show a clean case where diffusion improves over the classical decoder.
 
+Key takeaway:
+
+- Exactly as expected, diffusion gain appears in the non-IID regime and not in the uniform regime.
+
 ### 14.1 Hypothesis
 
 - With uniform random bits (`p(bit=1)=0.5`), symbols are close to equiprobable and MMSE already captures much of the structure.
@@ -417,14 +421,20 @@ Comparison plot:
 
 Observed deltas:
 
-- SNR 0 dB: uniform `+2.19e-02`, non-IID `-5.66e-02`
-- SNR 4 dB: uniform `+1.89e-02`, non-IID `-3.87e-02`
-- SNR 8 dB: uniform `+2.66e-02`, non-IID `-2.45e-02`
-- SNR 12 dB: uniform `+2.13e-02`, non-IID `-1.95e-02`
+| SNR (dB) | Uniform `p=0.5` | Non-IID `p=0.2` |
+|---|---:|---:|
+| 0 | `+2.19e-02` | `-5.66e-02` |
+| 4 | `+1.89e-02` | `-3.87e-02` |
+| 8 | `+2.66e-02` | `-2.45e-02` |
+| 12 | `+2.13e-02` | `-1.95e-02` |
 
 This directly supports the intuition: the diffusion advantage is much stronger when the received symbol stream has informative (non-uniform) prior structure.
 
 ### 14.4 Visuals
+
+Main comparison (most important figure):
+
+![Regime delta comparison](imgs/case_study/regime_delta_comparison.png)
 
 Uniform benchmark:
 
@@ -433,10 +443,6 @@ Uniform benchmark:
 Non-IID benchmark:
 
 ![Non-IID prior benchmark](imgs/case_study/non_iid_fast_ber_errorbars.png)
-
-Direct delta comparison:
-
-![Regime delta comparison](imgs/case_study/regime_delta_comparison.png)
 
 ## 13. References
 
