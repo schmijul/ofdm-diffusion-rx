@@ -35,6 +35,7 @@ def parse_args():
     p.add_argument("--n-train", type=int, default=None)
     p.add_argument("--n-val", type=int, default=None)
     p.add_argument("--force-train", action="store_true")
+    p.add_argument("--skip-plots", action="store_true")
     return p.parse_args()
 
 
@@ -144,19 +145,20 @@ def main():
     best_delta_values = [row["best_delta"] for row in summary_rows]
     slope_avg_delta_vs_skew = linear_slope(prior_skew_values, average_delta_values) if len(summary_rows) >= 2 else float("nan")
 
-    plt.figure(figsize=(7.2, 4.8))
-    plt.axhline(0.0, color="black", linewidth=1.0)
-    plt.plot(bit_one_prob_values, average_delta_values, marker="o", label="Average delta over SNR")
-    plt.plot(bit_one_prob_values, best_delta_values, marker="d", label="Best delta over SNR")
-    plt.xlabel("Bit-one prior probability")
-    plt.ylabel("Delta BER (Diffusion - MMSE)")
-    plt.title("Diffusion Gain vs Bit Prior")
-    plt.grid(True, alpha=0.3)
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig(outdir / "prior_sweep_delta_vs_prior.png", dpi=160)
-    plt.savefig(outdir / "prior_sweep_delta_vs_prior.pdf")
-    plt.close()
+    if not args.skip_plots:
+        plt.figure(figsize=(7.2, 4.8))
+        plt.axhline(0.0, color="black", linewidth=1.0)
+        plt.plot(bit_one_prob_values, average_delta_values, marker="o", label="Average delta over SNR")
+        plt.plot(bit_one_prob_values, best_delta_values, marker="d", label="Best delta over SNR")
+        plt.xlabel("Bit-one prior probability")
+        plt.ylabel("Delta BER (Diffusion - MMSE)")
+        plt.title("Diffusion Gain vs Bit Prior")
+        plt.grid(True, alpha=0.3)
+        plt.legend()
+        plt.tight_layout()
+        plt.savefig(outdir / "prior_sweep_delta_vs_prior.png", dpi=160)
+        plt.savefig(outdir / "prior_sweep_delta_vs_prior.pdf")
+        plt.close()
 
     summary_md = outdir / "prior_sweep_summary.md"
     summary_md.write_text(

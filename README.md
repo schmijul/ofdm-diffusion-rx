@@ -426,6 +426,10 @@ One-command paths:
 
 `make regime-study-large`
 
+Optional speed-up for long runs:
+
+- add `SKIP_PLOTS=1` to defer plotting and only generate numeric summaries first.
+
 Outputs:
 
 - `results/regime_study_*/regime_summary.md`
@@ -485,6 +489,10 @@ The repository now also contains a dedicated prior-sweep pipeline so the non-IID
 Main entrypoint:
 
 `make prior-sweep`
+
+Optional speed-up:
+
+- `make prior-sweep SKIP_PLOTS=1`
 
 The script trains one model per `bit_one_prob`, benchmarks each model, writes `prior_sweep_summary.csv`, and plots diffusion gain against the prior.
 

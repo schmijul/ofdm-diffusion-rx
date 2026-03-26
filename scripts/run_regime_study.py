@@ -25,6 +25,7 @@ def parse_args():
     p.add_argument("--n-train", type=int, default=None)
     p.add_argument("--n-val", type=int, default=None)
     p.add_argument("--force-train", action="store_true")
+    p.add_argument("--skip-plots", action="store_true")
     return p.parse_args()
 
 
@@ -50,7 +51,7 @@ def ensure_trained(config_path: str, outdir: Path, args) -> Path:
     return checkpoint
 
 
-def run_benchmark(config_path: str, checkpoint: Path, outdir: Path, n_frames: int, seeds: str) -> Path:
+def run_benchmark(config_path: str, checkpoint: Path, outdir: Path, n_frames: int, seeds: str, skip_plots: bool) -> Path:
     run(
         [
             sys.executable,
@@ -67,16 +68,17 @@ def run_benchmark(config_path: str, checkpoint: Path, outdir: Path, n_frames: in
             seeds,
         ]
     )
-    run(
-        [
-            sys.executable,
-            "scripts/plot_benchmark.py",
-            "--csv",
-            str(outdir / "benchmark_summary.csv"),
-            "--outdir",
-            str(outdir),
-        ]
-    )
+    if not skip_plots:
+        run(
+            [
+                sys.executable,
+                "scripts/plot_benchmark.py",
+                "--csv",
+                str(outdir / "benchmark_summary.csv"),
+                "--outdir",
+                str(outdir),
+            ]
+        )
     return outdir / "benchmark_summary.csv"
 
 
@@ -103,21 +105,26 @@ def main():
     uniform_checkpoint = ensure_trained(args.uniform_config, uniform_dir, args)
     non_iid_checkpoint = ensure_trained(args.non_iid_config, non_iid_dir, args)
 
-    uniform_summary_csv = run_benchmark(args.uniform_config, uniform_checkpoint, uniform_dir, args.n_frames, args.seeds)
-    non_iid_summary_csv = run_benchmark(args.non_iid_config, non_iid_checkpoint, non_iid_dir, args.n_frames, args.seeds)
-
-    run(
-        [
-            sys.executable,
-            "scripts/plot_regime_comparison.py",
-            "--uniform-csv",
-            str(uniform_summary_csv),
-            "--non-iid-csv",
-            str(non_iid_summary_csv),
-            "--outdir",
-            str(study_root_dir),
-        ]
+    uniform_summary_csv = run_benchmark(
+        args.uniform_config, uniform_checkpoint, uniform_dir, args.n_frames, args.seeds, args.skip_plots
     )
+    non_iid_summary_csv = run_benchmark(
+        args.non_iid_config, non_iid_checkpoint, non_iid_dir, args.n_frames, args.seeds, args.skip_plots
+    )
+
+    if not args.skip_plots:
+        run(
+            [
+                sys.executable,
+                "scripts/plot_regime_comparison.py",
+                "--uniform-csv",
+                str(uniform_summary_csv),
+                "--non-iid-csv",
+                str(non_iid_summary_csv),
+                "--outdir",
+                str(study_root_dir),
+            ]
+        )
 
     uniform_rows = load_csv_rows(uniform_summary_csv)
     non_iid_rows = load_csv_rows(non_iid_summary_csv)
