@@ -5,8 +5,9 @@ SMOKE_OUT := results/smoke_make
 FULL_OUT := results/full
 BENCH_OUT := results/benchmark
 TEXT_OUT := results/text_benchmark
+PRIOR_GRID := 0.1,0.2,0.3,0.4,0.5
 
-.PHONY: help venv install quick-test test smoke train evaluate plot benchmark text-benchmark regime-compare clean
+.PHONY: help venv install quick-test test smoke train evaluate plot benchmark text-benchmark regime-compare regime-study-fast regime-study-large prior-sweep clean
 
 help:
 	@echo "Targets:"
@@ -21,6 +22,9 @@ help:
 	@echo "  make benchmark   - multi-seed BER benchmark summary"
 	@echo "  make text-benchmark TEXT=path - run .txt transmission benchmark with leak guard"
 	@echo "  make regime-compare UNIFORM=csv NONIID=csv - compare diffusion gain across priors"
+	@echo "  make regime-study-fast  - train/benchmark uniform vs non-IID fast configs"
+	@echo "  make regime-study-large - train/benchmark uniform vs non-IID large configs"
+	@echo "  make prior-sweep        - sweep bit priors and plot diffusion gain trend"
 	@echo "  make clean       - remove smoke/full result folders"
 
 venv:
@@ -61,6 +65,15 @@ regime-compare:
 	@test -n "$(UNIFORM)" || (echo "Usage: make regime-compare UNIFORM=.../benchmark_summary.csv NONIID=.../benchmark_summary.csv" && exit 1)
 	@test -n "$(NONIID)" || (echo "Usage: make regime-compare UNIFORM=.../benchmark_summary.csv NONIID=.../benchmark_summary.csv" && exit 1)
 	$(VENV_PY) scripts/plot_regime_comparison.py --uniform-csv "$(UNIFORM)" --non-iid-csv "$(NONIID)" --outdir results/regime_compare
+
+regime-study-fast:
+	$(VENV_PY) scripts/run_regime_study.py --uniform-config config/exp_uniform_fast.yaml --non-iid-config config/exp_non_iid_fast.yaml --outdir results/regime_study_fast --n-frames 30 --seeds 1,2
+
+regime-study-large:
+	$(VENV_PY) scripts/run_regime_study.py --uniform-config config/exp_uniform_large.yaml --non-iid-config config/exp_non_iid_large.yaml --outdir results/regime_study_large --n-frames 120 --seeds 1,2,3
+
+prior-sweep:
+	$(VENV_PY) scripts/prior_sweep.py --base-config config/exp_uniform_fast.yaml --priors "$(if $(PRIORS),$(PRIORS),$(PRIOR_GRID))" --outdir results/prior_sweep --n-frames 20 --seeds 1,2
 
 clean:
 	rm -rf $(SMOKE_OUT) $(FULL_OUT) $(BENCH_OUT) $(TEXT_OUT)
