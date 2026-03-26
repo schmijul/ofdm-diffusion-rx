@@ -11,8 +11,8 @@ Current project snapshot:
 - This project includes DDPM-style denoisers trained on equalized 16-QAM symbols and benchmarked via BER/SER vs SNR.
 - This project now corrects FFT-domain MMSE noise scaling, so the classical baseline is physically consistent between time-domain AWGN injection and frequency-domain equalization.
 - Main achieved result: diffusion gain is regime-dependent.
-- In uniform symbol-prior settings (`bit_one_prob=0.5`), diffusion does not beat LS+MMSE in the fast benchmark.
-- In non-IID settings (`bit_one_prob=0.2`), diffusion consistently beats LS+MMSE across tested SNR points.
+- In uniform symbol-prior settings (`bit_one_prob=0.5`), diffusion does not beat LS+MMSE in either the fast or large benchmark.
+- In non-IID settings (`bit_one_prob=0.2`), diffusion consistently beats LS+MMSE across tested SNR points in both fast and large benchmarks.
 - Perfect-CSI MMSE remains much better than LS+MMSE, which makes channel estimation and pilot interpolation the next clear classical bottleneck.
 - The README includes reproducible commands, plots, and config files for both regimes.
 
@@ -20,16 +20,16 @@ Main result in one figure:
 
 - The plot compares `LS+MMSE`, `Diffusion+MMSE`, and `Perfect-CSI MMSE`.
 - Lower BER is better, so lower curves are better.
-- This first figure shows the `non-IID` case (`bit_one_prob=0.2`).
+- This first figure shows the stronger `large` non-IID confirmation run (`bit_one_prob=0.2`).
 - In this regime, `Diffusion+MMSE` is consistently below `LS+MMSE`, so diffusion helps.
 - `Perfect-CSI MMSE` is still much lower, which shows the receiver is currently limited more by channel estimation than by symbol denoising alone.
 
-![Non-IID prior benchmark](imgs/case_study/non_iid_fast_ber_errorbars.png)
+![Non-IID prior benchmark](imgs/case_study/non_iid_large_ber_errorbars.png)
 
 Immediate takeaway:
 
 - Diffusion is not universally better.
-- It helps when the symbol prior is structured (`non-IID`).
+- It helps when the symbol prior is structured (`non-IID`), and that effect survives the larger confirmation run.
 - It does not help in the uniform-prior control setting.
 
 This repository is designed to reproduce the core idea from **CDDM (Wu et al., IEEE TWC 2024)** in a clean and modular way:
@@ -478,7 +478,7 @@ Comparison plot:
 - Uniform prior (`bit_one_prob=0.5`): diffusion is worse at all tested SNR points (positive delta).
 - Non-IID prior (`bit_one_prob=0.2`): diffusion is better at all tested SNR points (negative delta).
 
-Observed deltas:
+Fast exploratory run:
 
 | SNR (dB) | Uniform `p=0.5` | Non-IID `p=0.2` |
 |---|---:|---:|
@@ -487,7 +487,23 @@ Observed deltas:
 | 8 | `+3.00e-02` | `-3.17e-02` |
 | 12 | `+2.17e-02` | `-2.56e-02` |
 
-This directly supports the intuition: the diffusion advantage is much stronger when the received symbol stream has informative (non-uniform) prior structure.
+Large confirmation run:
+
+| SNR (dB) | Uniform `p=0.5` | Non-IID `p=0.2` |
+|---|---:|---:|
+| 0 | `+1.49e-02` | `-7.42e-02` |
+| 4 | `+1.95e-02` | `-5.10e-02` |
+| 8 | `+1.41e-02` | `-2.51e-02` |
+| 12 | `+1.19e-02` | `-1.85e-02` |
+
+Average delta by run size:
+
+| Run | Uniform avg delta | Non-IID avg delta | Supports hypothesis |
+|---|---:|---:|---|
+| Fast | `+2.81e-02` | `-5.41e-02` | `yes` |
+| Large | `+1.51e-02` | `-4.22e-02` | `yes` |
+
+This directly supports the intuition: the diffusion advantage is much stronger when the received symbol stream has informative (non-uniform) prior structure, and the sign of the result remains stable as the benchmark budget increases.
 
 Important receiver-side interpretation:
 
@@ -501,17 +517,17 @@ Main comparison plots (MMSE vs Diffusion):
 
 Each BER plot also includes the `Perfect-CSI MMSE` reference curve for diagnosis.
 
-Uniform benchmark:
+Uniform benchmark (large run):
 
-![Uniform prior benchmark](imgs/case_study/uniform_fast_ber_errorbars.png)
+![Uniform prior benchmark](imgs/case_study/uniform_large_ber_errorbars.png)
 
-Non-IID benchmark:
+Non-IID benchmark (large run):
 
-![Non-IID prior benchmark](imgs/case_study/non_iid_fast_ber_errorbars.png)
+![Non-IID prior benchmark](imgs/case_study/non_iid_large_ber_errorbars.png)
 
-Optional delta view (Diffusion - MMSE):
+Optional delta view (large run, Diffusion - MMSE):
 
-![Regime delta comparison](imgs/case_study/regime_delta_comparison.png)
+![Regime delta comparison](imgs/case_study/regime_delta_comparison_large.png)
 
 ### 14.5 Prior-Sweep Tooling
 
