@@ -106,6 +106,7 @@ def main():
                 "n_frames_per_seed",
             ]
         )
+        f.flush()
 
         for snr_db in snr_grid(cfg):
             zf_seed_means = []
@@ -178,10 +179,12 @@ def main():
                     args.n_frames,
                 ]
             )
+            f.flush()
 
             print(
                 f"snr={snr_db:.1f} "
                 f"mmse={mmse_mean:.4e}±{mmse_std:.2e} "
+                f"perfect={genie_mean:.4e}±{genie_std:.2e} "
                 f"diff={diff_mean:.4e}±{diff_std:.2e} "
                 f"delta(diff-mmse)={delta_mean:.4e}±{delta_std:.2e}"
             )

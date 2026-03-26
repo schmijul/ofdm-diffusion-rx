@@ -13,6 +13,7 @@ from src.estimation import interpolate_channel, ls_channel_estimate
 from src.metrics import bit_error_rate
 from src.ofdm import (
     build_ofdm_grid,
+    fft_noise_power,
     get_data_indices,
     get_pilot_indices,
     ofdm_demodulate,
@@ -60,9 +61,10 @@ def simulate_received_frame(cfg: dict, snr_db: float, bits_tx: torch.Tensor | No
     else:
         taps = generate_rayleigh_taps(n_taps, exp_decay, device)
     rx_time = apply_multipath(tx_time, taps)
-    rx_time, noise_power = add_awgn(rx_time, snr_db)
+    rx_time, noise_power_time = add_awgn(rx_time, snr_db)
 
     rx_grid = ofdm_demodulate(rx_time, n_sc, cp)
+    noise_power_freq = fft_noise_power(noise_power_time, n_sc)
     h_true = channel_frequency_response(taps, n_sc).unsqueeze(0).repeat(n_sym, 1)
 
     return {
@@ -74,7 +76,9 @@ def simulate_received_frame(cfg: dict, snr_db: float, bits_tx: torch.Tensor | No
         "tx_symbols": data_symbols,
         "rx_grid": rx_grid,
         "h_true": h_true,
-        "noise_power": noise_power,
+        "noise_power": noise_power_freq,
+        "noise_power_time": noise_power_time,
+        "noise_power_freq": noise_power_freq,
     }
 
 
@@ -115,6 +119,8 @@ def run_receiver_on_frame(frame: dict, method: str = "ls_mmse", perfect_csi: boo
         "h_true": h_true.detach().cpu(),
         "h_hat": h_hat.detach().cpu(),
         "noise_power": noise_power,
+        "noise_power_time": frame.get("noise_power_time", noise_power),
+        "noise_power_freq": frame.get("noise_power_freq", noise_power),
         "snr_db": frame["snr_db"],
     }
 

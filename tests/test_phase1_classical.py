@@ -5,7 +5,7 @@ import torch
 from src.classical_receiver import run_classical_frame, run_receiver_on_frame, simulate_received_frame
 from src.demapper import bits_to_qam16, qam16_to_bits
 from src.estimation import interpolate_channel, ls_channel_estimate
-from src.ofdm import get_pilot_indices
+from src.ofdm import fft_noise_power, get_pilot_indices
 from src.utils import load_config, set_seed
 
 
@@ -26,6 +26,20 @@ def test_awgn_high_snr_near_zero_ber():
 
     out = run_classical_frame(cfg, snr_db=30.0, method="perfect_mmse", perfect_csi=True)
     assert out["ber"] < 1e-3
+
+
+def test_perfect_mmse_moderate_snr_is_reasonable():
+    set_seed(11)
+    cfg = copy.deepcopy(load_config())
+    cfg["channel"]["n_taps"] = 1
+    cfg["ofdm"]["n_ofdm_symbols"] = 12
+
+    bers = []
+    for _ in range(8):
+        out = run_classical_frame(cfg, snr_db=12.0, method="perfect_mmse", perfect_csi=True)
+        bers.append(out["ber"])
+
+    assert sum(bers) / len(bers) < 0.15
 
 
 def test_ls_mse_scales_with_noise_power():
@@ -94,6 +108,10 @@ def test_cyclic_interpolation_handles_band_edge():
 
     # Between k=4 and k=0 (wrapped via k=8), interpolation should decrease linearly: k=6 -> 2.
     assert torch.isclose(h_full[0, 6].real, torch.tensor(2.0), atol=1e-4)
+
+
+def test_fft_noise_power_matches_backward_fft_scaling():
+    assert fft_noise_power(0.25, 64) == 16.0
 
 
 def test_non_uniform_bit_source_respects_probability():

@@ -29,6 +29,7 @@ help:
 	@echo "  make prior-sweep        - sweep bit priors and plot diffusion gain trend (set SKIP_PLOTS=1 to speed up)"
 	@echo "  make prior-sweep-smoke  - tiny validation run for prior-sweep pipeline"
 	@echo "  make summarize-regime UNIFORM=csv NONIID=csv OUTDIR=dir - summarize existing regime CSVs"
+	@echo "  Add FORCE_TRAIN=1 to retrain and ignore existing checkpoints"
 	@echo "  make clean       - remove smoke/full result folders"
 
 venv:
@@ -76,19 +77,19 @@ regime-compare:
 	$(VENV_PY) scripts/plot_regime_comparison.py --uniform-csv "$(UNIFORM)" --non-iid-csv "$(NONIID)" --outdir results/regime_compare
 
 regime-study-fast:
-	$(VENV_PY) scripts/run_regime_study.py --uniform-config config/exp_uniform_fast.yaml --non-iid-config config/exp_non_iid_fast.yaml --outdir results/regime_study_fast --n-frames 30 --seeds 1,2 $(if $(SKIP_PLOTS),--skip-plots)
+	$(VENV_PY) scripts/run_regime_study.py --uniform-config config/exp_uniform_fast.yaml --non-iid-config config/exp_non_iid_fast.yaml --outdir results/regime_study_fast --n-frames 30 --seeds 1,2 $(if $(SKIP_PLOTS),--skip-plots) $(if $(FORCE_TRAIN),--force-train)
 
 regime-study-large:
-	$(VENV_PY) scripts/run_regime_study.py --uniform-config config/exp_uniform_large.yaml --non-iid-config config/exp_non_iid_large.yaml --outdir results/regime_study_large --n-frames 120 --seeds 1,2,3 $(if $(SKIP_PLOTS),--skip-plots)
+	$(VENV_PY) scripts/run_regime_study.py --uniform-config config/exp_uniform_large.yaml --non-iid-config config/exp_non_iid_large.yaml --outdir results/regime_study_large --n-frames 120 --seeds 1,2,3 $(if $(SKIP_PLOTS),--skip-plots) $(if $(FORCE_TRAIN),--force-train)
 
 regime-study-smoke:
-	$(VENV_PY) scripts/run_regime_study.py --uniform-config config/exp_uniform_fast.yaml --non-iid-config config/exp_non_iid_fast.yaml --outdir results/regime_study_smoke --epochs 1 --n-train 128 --n-val 64 --n-frames 2 --seeds 1 $(if $(SKIP_PLOTS),--skip-plots)
+	$(VENV_PY) scripts/run_regime_study.py --uniform-config config/exp_uniform_fast.yaml --non-iid-config config/exp_non_iid_fast.yaml --outdir results/regime_study_smoke --epochs 1 --n-train 128 --n-val 64 --n-frames 2 --seeds 1 $(if $(SKIP_PLOTS),--skip-plots) $(if $(FORCE_TRAIN),--force-train)
 
 prior-sweep:
-	$(VENV_PY) scripts/prior_sweep.py --base-config config/exp_uniform_fast.yaml --priors "$(if $(PRIORS),$(PRIORS),$(PRIOR_GRID))" --outdir results/prior_sweep --n-frames 20 --seeds 1,2 $(if $(SKIP_PLOTS),--skip-plots)
+	$(VENV_PY) scripts/prior_sweep.py --base-config config/exp_uniform_fast.yaml --priors "$(if $(PRIORS),$(PRIORS),$(PRIOR_GRID))" --outdir results/prior_sweep --n-frames 20 --seeds 1,2 $(if $(SKIP_PLOTS),--skip-plots) $(if $(FORCE_TRAIN),--force-train)
 
 prior-sweep-smoke:
-	$(VENV_PY) scripts/prior_sweep.py --base-config config/exp_uniform_fast.yaml --priors "0.2,0.5" --outdir results/prior_sweep_smoke --epochs 1 --n-train 128 --n-val 64 --n-frames 2 --seeds 1 $(if $(SKIP_PLOTS),--skip-plots)
+	$(VENV_PY) scripts/prior_sweep.py --base-config config/exp_uniform_fast.yaml --priors "0.2,0.5" --outdir results/prior_sweep_smoke --epochs 1 --n-train 128 --n-val 64 --n-frames 2 --seeds 1 $(if $(SKIP_PLOTS),--skip-plots) $(if $(FORCE_TRAIN),--force-train)
 
 summarize-regime:
 	@test -n "$(UNIFORM)" || (echo "Usage: make summarize-regime UNIFORM=.../benchmark_summary.csv NONIID=.../benchmark_summary.csv OUTDIR=results/..." && exit 1)

@@ -32,6 +32,16 @@ def build_ofdm_grid(
     return grid
 
 
+def fft_noise_power(noise_power_time: float, n_subcarriers: int, fft_norm: str = "backward") -> float:
+    if fft_norm == "backward":
+        return float(noise_power_time) * float(n_subcarriers)
+    if fft_norm == "ortho":
+        return float(noise_power_time)
+    if fft_norm == "forward":
+        return float(noise_power_time) / float(n_subcarriers)
+    raise ValueError(f"Unsupported fft_norm: {fft_norm}")
+
+
 def ofdm_modulate(grid: torch.Tensor, cp_length: int) -> torch.Tensor:
     time_no_cp = torch.fft.ifft(grid, dim=-1)
     cp = time_no_cp[:, -cp_length:]

@@ -24,6 +24,8 @@ def main():
     snr = [float(r["snr_db"]) for r in rows]
     mmse = [float(r["ls_mmse_mean"]) for r in rows]
     mmse_std = [float(r["ls_mmse_std"]) for r in rows]
+    perfect = [float(r["perfect_mmse_mean"]) for r in rows]
+    perfect_std = [float(r["perfect_mmse_std"]) for r in rows]
     diff = [float(r["diffusion_mmse_mean"]) for r in rows]
     diff_std = [float(r["diffusion_mmse_std"]) for r in rows]
     delta = [float(r["delta_diff_minus_mmse_mean"]) for r in rows]
@@ -31,6 +33,7 @@ def main():
 
     plt.figure(figsize=(7, 4.6))
     plt.errorbar(snr, mmse, yerr=mmse_std, marker="s", capsize=3, label="LS+MMSE")
+    plt.errorbar(snr, perfect, yerr=perfect_std, marker="^", capsize=3, label="Perfect-CSI MMSE")
     plt.errorbar(snr, diff, yerr=diff_std, marker="d", capsize=3, label="Diffusion+MMSE")
     plt.yscale("log")
     plt.xlabel("SNR [dB]")

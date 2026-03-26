@@ -9,14 +9,18 @@ Current project snapshot:
 - This project contains an end-to-end, reproducible CP-OFDM receiver stack (classical + diffusion post-denoising).
 - This project includes LS+ZF, LS+MMSE, and Perfect-CSI+MMSE baselines validated with tests and CI.
 - This project includes DDPM-style denoisers trained on equalized 16-QAM symbols and benchmarked via BER/SER vs SNR.
+- This project now corrects FFT-domain MMSE noise scaling, so the classical baseline is physically consistent between time-domain AWGN injection and frequency-domain equalization.
 - Main achieved result: diffusion gain is regime-dependent.
 - In uniform symbol-prior settings (`bit_one_prob=0.5`), diffusion does not beat LS+MMSE in the fast benchmark.
 - In non-IID settings (`bit_one_prob=0.2`), diffusion consistently beats LS+MMSE across tested SNR points.
+- Perfect-CSI MMSE remains much better than LS+MMSE, which makes channel estimation and pilot interpolation the next clear classical bottleneck.
 - The README includes reproducible commands, plots, and config files for both regimes.
 
 Main result in one figure (MMSE vs Diffusion):
 
 ![Non-IID prior benchmark](imgs/case_study/non_iid_fast_ber_errorbars.png)
+
+The benchmark plots now also include `Perfect-CSI MMSE` as a diagnostic reference, so the gap between channel-estimation-limited performance and the genie baseline is visible directly.
 
 This repository is designed to reproduce the core idea from **CDDM (Wu et al., IEEE TWC 2024)** in a clean and modular way:
 
@@ -433,6 +437,7 @@ One-command paths:
 Optional speed-up for long runs:
 
 - add `SKIP_PLOTS=1` to defer plotting and only generate numeric summaries first.
+- add `FORCE_TRAIN=1` after receiver/model changes to avoid reusing stale checkpoints.
 
 Outputs:
 
@@ -467,16 +472,24 @@ Observed deltas:
 
 | SNR (dB) | Uniform `p=0.5` | Non-IID `p=0.2` |
 |---|---:|---:|
-| 0 | `+2.19e-02` | `-5.66e-02` |
-| 4 | `+1.89e-02` | `-3.87e-02` |
-| 8 | `+2.66e-02` | `-2.45e-02` |
-| 12 | `+2.13e-02` | `-1.95e-02` |
+| 0 | `+2.72e-02` | `-9.35e-02` |
+| 4 | `+3.37e-02` | `-6.55e-02` |
+| 8 | `+3.00e-02` | `-3.17e-02` |
+| 12 | `+2.17e-02` | `-2.56e-02` |
 
 This directly supports the intuition: the diffusion advantage is much stronger when the received symbol stream has informative (non-uniform) prior structure.
+
+Important receiver-side interpretation:
+
+- The FFT/MMSE noise-scaling bug in the classical chain has been fixed, so these numbers reflect a consistent time-domain-to-frequency-domain noise model.
+- Even after that fix, `Perfect-CSI MMSE` is still far below `LS+MMSE`, so the dominant reason for the remaining high absolute BER is now channel estimation / pilot interpolation, not the equalizer regularization term alone.
+- The x-axis is currently a waveform-level SNR derived from measured time-domain signal power in `add_awgn(...)`; it is not yet presented as an explicit `Eb/N0` axis.
 
 ### 14.4 Visuals
 
 Main comparison plots (MMSE vs Diffusion):
+
+Each BER plot also includes the `Perfect-CSI MMSE` reference curve for diagnosis.
 
 Uniform benchmark:
 
@@ -501,6 +514,7 @@ Main entrypoint:
 Optional speed-up:
 
 - `make prior-sweep SKIP_PLOTS=1`
+- add `FORCE_TRAIN=1` when the training distribution or receiver internals changed.
 
 The script trains one model per `bit_one_prob`, benchmarks each model, writes `prior_sweep_summary.csv`, and plots diffusion gain against the prior.
 
