@@ -16,11 +16,21 @@ Current project snapshot:
 - Perfect-CSI MMSE remains much better than LS+MMSE, which makes channel estimation and pilot interpolation the next clear classical bottleneck.
 - The README includes reproducible commands, plots, and config files for both regimes.
 
-Main result in one figure (MMSE vs Diffusion):
+Main result in one figure:
+
+- The plot compares `LS+MMSE`, `Diffusion+MMSE`, and `Perfect-CSI MMSE`.
+- Lower BER is better, so lower curves are better.
+- This first figure shows the `non-IID` case (`bit_one_prob=0.2`).
+- In this regime, `Diffusion+MMSE` is consistently below `LS+MMSE`, so diffusion helps.
+- `Perfect-CSI MMSE` is still much lower, which shows the receiver is currently limited more by channel estimation than by symbol denoising alone.
 
 ![Non-IID prior benchmark](imgs/case_study/non_iid_fast_ber_errorbars.png)
 
-The benchmark plots now also include `Perfect-CSI MMSE` as a diagnostic reference, so the gap between channel-estimation-limited performance and the genie baseline is visible directly.
+Immediate takeaway:
+
+- Diffusion is not universally better.
+- It helps when the symbol prior is structured (`non-IID`).
+- It does not help in the uniform-prior control setting.
 
 This repository is designed to reproduce the core idea from **CDDM (Wu et al., IEEE TWC 2024)** in a clean and modular way:
 
