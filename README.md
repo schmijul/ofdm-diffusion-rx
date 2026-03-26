@@ -4,12 +4,12 @@ A research-oriented PyTorch project that compares classical OFDM receivers again
 
 Current project snapshot:
 
-- We built an end-to-end, reproducible CP-OFDM receiver stack (classical + diffusion post-denoising).
-- We implemented and validated LS+ZF, LS+MMSE, and Perfect-CSI+MMSE baselines with tests and CI.
-- We trained DDPM-style denoisers on equalized 16-QAM symbols and benchmarked BER/SER vs SNR.
+- This project contains an end-to-end, reproducible CP-OFDM receiver stack (classical + diffusion post-denoising).
+- This project includes LS+ZF, LS+MMSE, and Perfect-CSI+MMSE baselines validated with tests and CI.
+- This project includes DDPM-style denoisers trained on equalized 16-QAM symbols and benchmarked via BER/SER vs SNR.
 - Main achieved result: diffusion gain is regime-dependent.
-- In uniform symbol-prior settings (`bit_one_prob=0.5`), diffusion did not beat LS+MMSE in our fast benchmark.
-- In non-IID settings (`bit_one_prob=0.2`), diffusion consistently beat LS+MMSE across tested SNR points.
+- In uniform symbol-prior settings (`bit_one_prob=0.5`), diffusion does not beat LS+MMSE in the fast benchmark.
+- In non-IID settings (`bit_one_prob=0.2`), diffusion consistently beats LS+MMSE across tested SNR points.
 - The README includes reproducible commands, plots, and config files for both regimes.
 
 This repository is designed to reproduce the core idea from **CDDM (Wu et al., IEEE TWC 2024)** in a clean and modular way:
