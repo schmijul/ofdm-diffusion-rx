@@ -13,6 +13,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from src.study_utils import (
+    linear_slope,
     load_csv_rows,
     normalize_unique_bit_priors,
     parse_float_list,
@@ -138,8 +139,10 @@ def main():
             )
 
     bit_one_prob_values = [row["bit_one_prob"] for row in summary_rows]
+    prior_skew_values = [row["prior_skew"] for row in summary_rows]
     average_delta_values = [row["avg_delta"] for row in summary_rows]
     best_delta_values = [row["best_delta"] for row in summary_rows]
+    slope_avg_delta_vs_skew = linear_slope(prior_skew_values, average_delta_values) if len(summary_rows) >= 2 else float("nan")
 
     plt.figure(figsize=(7.2, 4.8))
     plt.axhline(0.0, color="black", linewidth=1.0)
@@ -154,6 +157,21 @@ def main():
     plt.savefig(outdir / "prior_sweep_delta_vs_prior.png", dpi=160)
     plt.savefig(outdir / "prior_sweep_delta_vs_prior.pdf")
     plt.close()
+
+    summary_md = outdir / "prior_sweep_summary.md"
+    summary_md.write_text(
+        "\n".join(
+            [
+                "# Prior Sweep Summary",
+                "",
+                f"- Number of priors: {len(summary_rows)}",
+                f"- Slope avg_delta vs prior_skew: {slope_avg_delta_vs_skew:.4e}",
+                "- Interpretation: more negative slope means diffusion gains increase as priors become more skewed.",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
 
 if __name__ == "__main__":

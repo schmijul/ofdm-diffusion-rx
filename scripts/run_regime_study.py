@@ -125,6 +125,9 @@ def main():
     non_iid_summary = summarize_delta_curve(non_iid_rows)
 
     summary_path = study_root_dir / "regime_summary.md"
+    summary_csv_path = study_root_dir / "regime_summary.csv"
+    supports_hypothesis = (non_iid_summary["avg_delta"] < 0.0) and (uniform_summary["avg_delta"] >= 0.0)
+
     summary_path.write_text(
         "\n".join(
             [
@@ -136,6 +139,28 @@ def main():
                 f"- Non-IID avg delta: {non_iid_summary['avg_delta']:.4e}",
                 f"- Non-IID best delta: {non_iid_summary['best_delta']:.4e}",
                 f"- Non-IID worst delta: {non_iid_summary['worst_delta']:.4e}",
+                f"- Supports non-IID gain hypothesis: {'yes' if supports_hypothesis else 'no'}",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    summary_csv_path.write_text(
+        "\n".join(
+            [
+                "regime,avg_delta,best_delta,worst_delta,snr_min_db,snr_max_db,n_snrs",
+                (
+                    f"uniform,{uniform_summary['avg_delta']},{uniform_summary['best_delta']},"
+                    f"{uniform_summary['worst_delta']},{uniform_summary['snr_min_db']},"
+                    f"{uniform_summary['snr_max_db']},{uniform_summary['n_snrs']}"
+                ),
+                (
+                    f"non_iid,{non_iid_summary['avg_delta']},{non_iid_summary['best_delta']},"
+                    f"{non_iid_summary['worst_delta']},{non_iid_summary['snr_min_db']},"
+                    f"{non_iid_summary['snr_max_db']},{non_iid_summary['n_snrs']}"
+                ),
+                f"hypothesis_support,{int(supports_hypothesis)},,,,",
             ]
         )
         + "\n",

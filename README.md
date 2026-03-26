@@ -426,6 +426,12 @@ One-command paths:
 
 `make regime-study-large`
 
+Outputs:
+
+- `results/regime_study_*/regime_summary.md`
+- `results/regime_study_*/regime_summary.csv`
+- `results/regime_study_*/regime_delta_comparison.png`
+
 Train:
 
 `python scripts/train.py --config config/exp_uniform_fast.yaml --outdir results/exp_uniform_fast`
@@ -481,6 +487,11 @@ Main entrypoint:
 `make prior-sweep`
 
 The script trains one model per `bit_one_prob`, benchmarks each model, writes `prior_sweep_summary.csv`, and plots diffusion gain against the prior.
+
+Additional outputs:
+
+- `prior_sweep_summary.md` with trend interpretation
+- `prior_sweep_delta_vs_prior.png` as the main sweep visualization
 
 ### 14.6 Customize In 5 Minutes
 

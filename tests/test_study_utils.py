@@ -1,6 +1,7 @@
 import pytest
 
 from src.study_utils import (
+    linear_slope,
     load_csv_rows,
     normalize_unique_bit_priors,
     parse_float_list,
@@ -73,3 +74,8 @@ def test_summarize_delta_curve_accepts_alias_column(tmp_path):
     rows = load_csv_rows(csv_path)
     summary = summarize_delta_curve(rows)
     assert summary["avg_delta"] == -0.015
+
+
+def test_linear_slope_matches_simple_line():
+    slope = linear_slope([0.0, 1.0, 2.0], [1.0, 3.0, 5.0])
+    assert abs(slope - 2.0) < 1e-12

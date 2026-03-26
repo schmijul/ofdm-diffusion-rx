@@ -59,3 +59,20 @@ def summarize_delta_curve(rows: list[dict]) -> dict:
         "worst_delta": max(deltas),
         "n_snrs": len(deltas),
     }
+
+
+def linear_slope(xs: list[float], ys: list[float]) -> float:
+    if len(xs) != len(ys):
+        raise ValueError("xs and ys must have identical length")
+    if len(xs) < 2:
+        raise ValueError("Need at least 2 points to fit a slope")
+
+    n = float(len(xs))
+    sum_x = sum(xs)
+    sum_y = sum(ys)
+    sum_xx = sum(x * x for x in xs)
+    sum_xy = sum(x * y for x, y in zip(xs, ys))
+    denom = n * sum_xx - sum_x * sum_x
+    if denom == 0.0:
+        raise ValueError("Cannot fit slope: degenerate x values")
+    return (n * sum_xy - sum_x * sum_y) / denom
