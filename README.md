@@ -358,6 +358,7 @@ Convenient local commands:
 - `make regime-study-large` for the stronger, slower confirmation run
 - `make prior-sweep` to sweep `bit_one_prob` and plot diffusion gain vs prior
 - `make prior-sweep-smoke` for a tiny end-to-end validation of the prior-sweep pipeline
+- `make summarize-regime UNIFORM=... NONIID=... OUTDIR=...` to summarize already-finished benchmark CSVs
 - `make help` to list all shortcuts
 
 Automation status:
