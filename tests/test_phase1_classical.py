@@ -94,3 +94,27 @@ def test_cyclic_interpolation_handles_band_edge():
 
     # Between k=4 and k=0 (wrapped via k=8), interpolation should decrease linearly: k=6 -> 2.
     assert torch.isclose(h_full[0, 6].real, torch.tensor(2.0), atol=1e-4)
+
+
+def test_non_uniform_bit_source_respects_probability():
+    set_seed(7)
+    cfg = load_config()
+    cfg = copy.deepcopy(cfg)
+    cfg["ofdm"]["n_ofdm_symbols"] = 24
+    cfg["modulation"]["bit_one_prob"] = 0.2
+
+    frame = simulate_received_frame(cfg, snr_db=8.0)
+    p_hat = float(frame["bits_tx"].float().mean().item())
+    assert abs(p_hat - 0.2) < 0.05
+
+
+def test_invalid_bit_probability_raises():
+    cfg = load_config()
+    cfg = copy.deepcopy(cfg)
+    cfg["modulation"]["bit_one_prob"] = 1.0
+
+    try:
+        simulate_received_frame(cfg, snr_db=8.0)
+        assert False, "Expected ValueError for invalid modulation.bit_one_prob"
+    except ValueError as e:
+        assert "bit_one_prob" in str(e)

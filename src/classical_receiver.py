@@ -42,7 +42,10 @@ def simulate_received_frame(cfg: dict, snr_db: float, bits_tx: torch.Tensor | No
 
     n_bits_frame = n_data * 4
     if bits_tx is None:
-        bits_tx = torch.randint(0, 2, (n_bits_frame,), device=device)
+        p1 = float(cfg.get("modulation", {}).get("bit_one_prob", 0.5))
+        if p1 <= 0.0 or p1 >= 1.0:
+            raise ValueError("modulation.bit_one_prob must be in (0,1)")
+        bits_tx = torch.bernoulli(torch.full((n_bits_frame,), p1, device=device)).long()
     else:
         bits_tx = bits_tx.to(device).long().reshape(-1)
         if bits_tx.numel() != n_bits_frame:
