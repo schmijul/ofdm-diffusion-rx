@@ -59,16 +59,15 @@ def train_if_needed(config_path: Path, outdir: Path, args) -> Path:
 
 def main():
     args = parse_args()
-    priors = parse_float_list(args.priors)
-    base_cfg = load_config(args.base_config)
+    bit_priors = parse_float_list(args.priors)
 
     outdir = Path(args.outdir)
     config_dir = outdir / "configs"
     config_dir.mkdir(parents=True, exist_ok=True)
 
-    rows = []
+    summary_rows = []
 
-    for bit_one_prob in priors:
+    for bit_one_prob in bit_priors:
         cfg = load_config(args.base_config)
         cfg["modulation"]["bit_one_prob"] = float(bit_one_prob)
 
@@ -96,39 +95,39 @@ def main():
             ]
         )
 
-        summary = summarize_delta_curve(load_csv_rows(study_dir / "benchmark_summary.csv"))
-        rows.append(
+        delta_summary = summarize_delta_curve(load_csv_rows(study_dir / "benchmark_summary.csv"))
+        summary_rows.append(
             {
                 "bit_one_prob": float(bit_one_prob),
                 "prior_skew": abs(float(bit_one_prob) - 0.5),
-                "avg_delta": summary["avg_delta"],
-                "best_delta": summary["best_delta"],
-                "worst_delta": summary["worst_delta"],
-                "snr_min_db": summary["snr_min_db"],
-                "snr_max_db": summary["snr_max_db"],
-                "n_snrs": summary["n_snrs"],
+                "avg_delta": delta_summary["avg_delta"],
+                "best_delta": delta_summary["best_delta"],
+                "worst_delta": delta_summary["worst_delta"],
+                "snr_min_db": delta_summary["snr_min_db"],
+                "snr_max_db": delta_summary["snr_max_db"],
+                "n_snrs": delta_summary["n_snrs"],
             }
         )
 
-    rows.sort(key=lambda row: row["bit_one_prob"])
+    summary_rows.sort(key=lambda row: row["bit_one_prob"])
 
     csv_path = outdir / "prior_sweep_summary.csv"
     with csv_path.open("w", encoding="utf-8") as f:
         f.write("bit_one_prob,prior_skew,avg_delta,best_delta,worst_delta,snr_min_db,snr_max_db,n_snrs\n")
-        for row in rows:
+        for row in summary_rows:
             f.write(
                 f"{row['bit_one_prob']},{row['prior_skew']},{row['avg_delta']},{row['best_delta']},"
                 f"{row['worst_delta']},{row['snr_min_db']},{row['snr_max_db']},{row['n_snrs']}\n"
             )
 
-    probs = [row["bit_one_prob"] for row in rows]
-    avg_delta = [row["avg_delta"] for row in rows]
-    best_delta = [row["best_delta"] for row in rows]
+    bit_one_prob_values = [row["bit_one_prob"] for row in summary_rows]
+    average_delta_values = [row["avg_delta"] for row in summary_rows]
+    best_delta_values = [row["best_delta"] for row in summary_rows]
 
     plt.figure(figsize=(7.2, 4.8))
     plt.axhline(0.0, color="black", linewidth=1.0)
-    plt.plot(probs, avg_delta, marker="o", label="Average delta over SNR")
-    plt.plot(probs, best_delta, marker="d", label="Best delta over SNR")
+    plt.plot(bit_one_prob_values, average_delta_values, marker="o", label="Average delta over SNR")
+    plt.plot(bit_one_prob_values, best_delta_values, marker="d", label="Best delta over SNR")
     plt.xlabel("Bit-one prior probability")
     plt.ylabel("Delta BER (Diffusion - MMSE)")
     plt.title("Diffusion Gain vs Bit Prior")

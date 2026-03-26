@@ -82,50 +82,50 @@ def run_benchmark(config_path: str, checkpoint: Path, outdir: Path, n_frames: in
 
 def main():
     args = parse_args()
-    outdir = Path(args.outdir)
-    outdir.mkdir(parents=True, exist_ok=True)
+    study_root_dir = Path(args.outdir)
+    study_root_dir.mkdir(parents=True, exist_ok=True)
 
-    uniform_dir = outdir / args.uniform_name
-    non_iid_dir = outdir / args.non_iid_name
+    uniform_dir = study_root_dir / args.uniform_name
+    non_iid_dir = study_root_dir / args.non_iid_name
     uniform_dir.mkdir(parents=True, exist_ok=True)
     non_iid_dir.mkdir(parents=True, exist_ok=True)
 
-    ckpt_uniform = ensure_trained(args.uniform_config, uniform_dir, args)
-    ckpt_non_iid = ensure_trained(args.non_iid_config, non_iid_dir, args)
+    uniform_checkpoint = ensure_trained(args.uniform_config, uniform_dir, args)
+    non_iid_checkpoint = ensure_trained(args.non_iid_config, non_iid_dir, args)
 
-    csv_uniform = run_benchmark(args.uniform_config, ckpt_uniform, uniform_dir, args.n_frames, args.seeds)
-    csv_non_iid = run_benchmark(args.non_iid_config, ckpt_non_iid, non_iid_dir, args.n_frames, args.seeds)
+    uniform_summary_csv = run_benchmark(args.uniform_config, uniform_checkpoint, uniform_dir, args.n_frames, args.seeds)
+    non_iid_summary_csv = run_benchmark(args.non_iid_config, non_iid_checkpoint, non_iid_dir, args.n_frames, args.seeds)
 
     run(
         [
             sys.executable,
             "scripts/plot_regime_comparison.py",
             "--uniform-csv",
-            str(csv_uniform),
+            str(uniform_summary_csv),
             "--non-iid-csv",
-            str(csv_non_iid),
+            str(non_iid_summary_csv),
             "--outdir",
-            str(outdir),
+            str(study_root_dir),
         ]
     )
 
-    rows_uniform = load_csv_rows(csv_uniform)
-    rows_non_iid = load_csv_rows(csv_non_iid)
-    summary_uniform = summarize_delta_curve(rows_uniform)
-    summary_non_iid = summarize_delta_curve(rows_non_iid)
+    uniform_rows = load_csv_rows(uniform_summary_csv)
+    non_iid_rows = load_csv_rows(non_iid_summary_csv)
+    uniform_summary = summarize_delta_curve(uniform_rows)
+    non_iid_summary = summarize_delta_curve(non_iid_rows)
 
-    summary_path = outdir / "regime_summary.md"
+    summary_path = study_root_dir / "regime_summary.md"
     summary_path.write_text(
         "\n".join(
             [
                 "# Regime Study Summary",
                 "",
-                f"- Uniform avg delta: {summary_uniform['avg_delta']:.4e}",
-                f"- Uniform best delta: {summary_uniform['best_delta']:.4e}",
-                f"- Uniform worst delta: {summary_uniform['worst_delta']:.4e}",
-                f"- Non-IID avg delta: {summary_non_iid['avg_delta']:.4e}",
-                f"- Non-IID best delta: {summary_non_iid['best_delta']:.4e}",
-                f"- Non-IID worst delta: {summary_non_iid['worst_delta']:.4e}",
+                f"- Uniform avg delta: {uniform_summary['avg_delta']:.4e}",
+                f"- Uniform best delta: {uniform_summary['best_delta']:.4e}",
+                f"- Uniform worst delta: {uniform_summary['worst_delta']:.4e}",
+                f"- Non-IID avg delta: {non_iid_summary['avg_delta']:.4e}",
+                f"- Non-IID best delta: {non_iid_summary['best_delta']:.4e}",
+                f"- Non-IID worst delta: {non_iid_summary['worst_delta']:.4e}",
             ]
         )
         + "\n",

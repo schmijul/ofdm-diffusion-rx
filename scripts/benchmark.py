@@ -97,6 +97,8 @@ def main():
                 "diffusion_mmse_std",
                 "delta_diff_minus_mmse_mean",
                 "delta_diff_minus_mmse_std",
+                "diffusion_gain_vs_mmse_mean",
+                "diffusion_gain_vs_mmse_std",
                 "n_seeds",
                 "n_frames_per_seed",
             ]
@@ -165,6 +167,8 @@ def main():
                     genie_std,
                     diff_mean,
                     diff_std,
+                    delta_mean,
+                    delta_std,
                     delta_mean,
                     delta_std,
                     len(seeds),

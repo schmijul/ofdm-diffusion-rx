@@ -481,6 +481,31 @@ Main entrypoint:
 
 The script trains one model per `bit_one_prob`, benchmarks each model, writes `prior_sweep_summary.csv`, and plots diffusion gain against the prior.
 
+### 14.6 Customize In 5 Minutes
+
+For most adaptations, these are the only knobs you need:
+
+1. Change symbol prior:
+`config/... -> modulation.bit_one_prob`
+
+2. Change channel regime:
+`config/... -> channel.model` (`rayleigh` or `tdl_a`) and tap settings
+
+3. Change model capacity:
+`config/... -> diffusion.model.hidden_dim`, `n_res_blocks`, `time_embedding_dim`
+
+4. Change training budget:
+`config/... -> training.n_train_samples`, `n_val_samples`, `epochs`
+
+5. Change evaluation cost/stability:
+benchmark CLI args `--n-frames` and `--seeds`
+
+Community note:
+
+- `benchmark_summary.csv` now includes both
+  - `delta_diff_minus_mmse_*` (legacy-compatible)
+  - `diffusion_gain_vs_mmse_*` (more explicit alias)
+
 ## 15. References
 
 - Wu et al., CDDM-style communication denoising concept (IEEE TWC 2024 context)
