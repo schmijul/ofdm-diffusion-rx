@@ -12,6 +12,10 @@ Current project snapshot:
 - In non-IID settings (`bit_one_prob=0.2`), diffusion consistently beats LS+MMSE across tested SNR points.
 - The README includes reproducible commands, plots, and config files for both regimes.
 
+Main result in one figure:
+
+![Regime delta comparison](imgs/case_study/regime_delta_comparison.png)
+
 This repository is designed to reproduce the core idea from **CDDM (Wu et al., IEEE TWC 2024)** in a clean and modular way:
 
 - Build a reliable classical CP-OFDM baseline first.
@@ -346,6 +350,10 @@ Convenient local commands:
 - `make benchmark` for multi-seed BER benchmarking with uncertainty stats
 - `make text-benchmark TEXT=path/to/test.txt` for real text transmission benchmarking
 - `make regime-compare UNIFORM=... NONIID=...` for side-by-side prior-regime comparison plots
+- `make regime-study-smoke` for a tiny end-to-end validation of the regime-study pipeline
+- `make regime-study-fast` for the main fast uniform-vs-non-IID experiment
+- `make regime-study-large` for the stronger, slower confirmation run
+- `make prior-sweep` to sweep `bit_one_prob` and plot diffusion gain vs prior
 - `make help` to list all shortcuts
 
 Automation status:
@@ -381,6 +389,9 @@ Implemented so far:
 - Plot pipeline now outputs both `ber_vs_snr.*` and `ser_vs_snr.*`
 - LS channel interpolation uses cyclic (band-edge aware) interpolation to reduce OFDM edge bias
 - `scripts/benchmark.py` adds multi-seed benchmarking with per-SNR mean/std and diffusion-vs-MMSE delta reporting
+- `scripts/run_regime_study.py` automates train -> benchmark -> plot for paired uniform/non-IID studies
+- `scripts/prior_sweep.py` automates multi-prior experiments and generates a delta-vs-prior plot
+- `src/study_utils.py` centralizes prior parsing and benchmark-summary helpers for the new study layer
 - non-uniform bit-prior support via `modulation.bit_one_prob` (for non-IID experiments)
 - fast experiment configs for regime studies:
   - `config/exp_uniform_fast.yaml`
@@ -407,6 +418,12 @@ Key takeaway:
 - With non-IID priors (`p(bit=1) != 0.5`), the induced symbol distribution becomes skewed, which gives a learned denoiser more exploitable prior structure.
 
 ### 14.2 Reproducible Setup
+
+One-command paths:
+
+`make regime-study-fast`
+
+`make regime-study-large`
 
 Train:
 
@@ -454,7 +471,17 @@ Non-IID benchmark:
 
 ![Non-IID prior benchmark](imgs/case_study/non_iid_fast_ber_errorbars.png)
 
-## 13. References
+### 14.5 Prior-Sweep Tooling
+
+The repository now also contains a dedicated prior-sweep pipeline so the non-IID hypothesis can be tested as a trend instead of only as a two-point comparison.
+
+Main entrypoint:
+
+`make prior-sweep`
+
+The script trains one model per `bit_one_prob`, benchmarks each model, writes `prior_sweep_summary.csv`, and plots diffusion gain against the prior.
+
+## 15. References
 
 - Wu et al., CDDM-style communication denoising concept (IEEE TWC 2024 context)
 - Standard OFDM references for CP-OFDM and pilot-aided channel estimation

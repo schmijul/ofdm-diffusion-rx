@@ -21,6 +21,9 @@ def parse_args():
     p.add_argument("--outdir", default="results/regime_study")
     p.add_argument("--n-frames", type=int, default=30)
     p.add_argument("--seeds", default="1,2")
+    p.add_argument("--epochs", type=int, default=None)
+    p.add_argument("--n-train", type=int, default=None)
+    p.add_argument("--n-val", type=int, default=None)
     p.add_argument("--force-train", action="store_true")
     return p.parse_args()
 
@@ -30,13 +33,20 @@ def run(cmd: list[str]) -> None:
     subprocess.run(cmd, check=True)
 
 
-def ensure_trained(config_path: str, outdir: Path, force_train: bool) -> Path:
+def ensure_trained(config_path: str, outdir: Path, args) -> Path:
     checkpoint = outdir / "best_model.pt"
-    if checkpoint.exists() and not force_train:
+    if checkpoint.exists() and not args.force_train:
         print(f"Reusing checkpoint: {checkpoint}")
         return checkpoint
 
-    run([sys.executable, "scripts/train.py", "--config", config_path, "--outdir", str(outdir)])
+    cmd = [sys.executable, "scripts/train.py", "--config", config_path, "--outdir", str(outdir)]
+    if args.epochs is not None:
+        cmd.extend(["--epochs", str(args.epochs)])
+    if args.n_train is not None:
+        cmd.extend(["--n-train", str(args.n_train)])
+    if args.n_val is not None:
+        cmd.extend(["--n-val", str(args.n_val)])
+    run(cmd)
     return checkpoint
 
 
@@ -80,8 +90,8 @@ def main():
     uniform_dir.mkdir(parents=True, exist_ok=True)
     non_iid_dir.mkdir(parents=True, exist_ok=True)
 
-    ckpt_uniform = ensure_trained(args.uniform_config, uniform_dir, args.force_train)
-    ckpt_non_iid = ensure_trained(args.non_iid_config, non_iid_dir, args.force_train)
+    ckpt_uniform = ensure_trained(args.uniform_config, uniform_dir, args)
+    ckpt_non_iid = ensure_trained(args.non_iid_config, non_iid_dir, args)
 
     csv_uniform = run_benchmark(args.uniform_config, ckpt_uniform, uniform_dir, args.n_frames, args.seeds)
     csv_non_iid = run_benchmark(args.non_iid_config, ckpt_non_iid, non_iid_dir, args.n_frames, args.seeds)

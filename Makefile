@@ -7,7 +7,7 @@ BENCH_OUT := results/benchmark
 TEXT_OUT := results/text_benchmark
 PRIOR_GRID := 0.1,0.2,0.3,0.4,0.5
 
-.PHONY: help venv install quick-test test smoke train evaluate plot benchmark text-benchmark regime-compare regime-study-fast regime-study-large prior-sweep clean
+.PHONY: help venv install quick-test test smoke train evaluate plot benchmark text-benchmark regime-compare regime-study-fast regime-study-large regime-study-smoke prior-sweep clean
 
 help:
 	@echo "Targets:"
@@ -24,6 +24,7 @@ help:
 	@echo "  make regime-compare UNIFORM=csv NONIID=csv - compare diffusion gain across priors"
 	@echo "  make regime-study-fast  - train/benchmark uniform vs non-IID fast configs"
 	@echo "  make regime-study-large - train/benchmark uniform vs non-IID large configs"
+	@echo "  make regime-study-smoke - tiny end-to-end validation of the regime-study pipeline"
 	@echo "  make prior-sweep        - sweep bit priors and plot diffusion gain trend"
 	@echo "  make clean       - remove smoke/full result folders"
 
@@ -71,6 +72,9 @@ regime-study-fast:
 
 regime-study-large:
 	$(VENV_PY) scripts/run_regime_study.py --uniform-config config/exp_uniform_large.yaml --non-iid-config config/exp_non_iid_large.yaml --outdir results/regime_study_large --n-frames 120 --seeds 1,2,3
+
+regime-study-smoke:
+	$(VENV_PY) scripts/run_regime_study.py --uniform-config config/exp_uniform_fast.yaml --non-iid-config config/exp_non_iid_fast.yaml --outdir results/regime_study_smoke --epochs 1 --n-train 128 --n-val 64 --n-frames 2 --seeds 1
 
 prior-sweep:
 	$(VENV_PY) scripts/prior_sweep.py --base-config config/exp_uniform_fast.yaml --priors "$(if $(PRIORS),$(PRIORS),$(PRIOR_GRID))" --outdir results/prior_sweep --n-frames 20 --seeds 1,2
