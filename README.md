@@ -14,9 +14,9 @@ Current project snapshot:
 - In non-IID settings (`bit_one_prob=0.2`), diffusion consistently beats LS+MMSE across tested SNR points.
 - The README includes reproducible commands, plots, and config files for both regimes.
 
-Main result in one figure:
+Main result in one figure (MMSE vs Diffusion):
 
-![Regime delta comparison](imgs/case_study/regime_delta_comparison.png)
+![Non-IID prior benchmark](imgs/case_study/non_iid_fast_ber_errorbars.png)
 
 This repository is designed to reproduce the core idea from **CDDM (Wu et al., IEEE TWC 2024)** in a clean and modular way:
 
@@ -438,6 +438,8 @@ Outputs:
 
 - `results/regime_study_*/regime_summary.md`
 - `results/regime_study_*/regime_summary.csv`
+- `results/regime_study_*/uniform/benchmark_ber_errorbars.png`
+- `results/regime_study_*/non_iid/benchmark_ber_errorbars.png`
 - `results/regime_study_*/regime_delta_comparison.png`
 
 Train:
@@ -474,9 +476,7 @@ This directly supports the intuition: the diffusion advantage is much stronger w
 
 ### 14.4 Visuals
 
-Main comparison (most important figure):
-
-![Regime delta comparison](imgs/case_study/regime_delta_comparison.png)
+Main comparison plots (MMSE vs Diffusion):
 
 Uniform benchmark:
 
@@ -485,6 +485,10 @@ Uniform benchmark:
 Non-IID benchmark:
 
 ![Non-IID prior benchmark](imgs/case_study/non_iid_fast_ber_errorbars.png)
+
+Optional delta view (Diffusion - MMSE):
+
+![Regime delta comparison](imgs/case_study/regime_delta_comparison.png)
 
 ### 14.5 Prior-Sweep Tooling
 
