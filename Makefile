@@ -6,7 +6,7 @@ FULL_OUT := results/full
 BENCH_OUT := results/benchmark
 TEXT_OUT := results/text_benchmark
 
-.PHONY: help venv install quick-test test smoke train evaluate plot benchmark text-benchmark clean
+.PHONY: help venv install quick-test test smoke train evaluate plot benchmark text-benchmark regime-compare clean
 
 help:
 	@echo "Targets:"
@@ -20,6 +20,7 @@ help:
 	@echo "  make plot        - generate plots from default eval CSV"
 	@echo "  make benchmark   - multi-seed BER benchmark summary"
 	@echo "  make text-benchmark TEXT=path - run .txt transmission benchmark with leak guard"
+	@echo "  make regime-compare UNIFORM=csv NONIID=csv - compare diffusion gain across priors"
 	@echo "  make clean       - remove smoke/full result folders"
 
 venv:
@@ -55,6 +56,11 @@ benchmark:
 text-benchmark:
 	@test -n "$(TEXT)" || (echo "Usage: make text-benchmark TEXT=path/to/test.txt [TRAIN_TEXTS=comma,separated,paths]" && exit 1)
 	$(VENV_PY) scripts/text_benchmark.py --text $(TEXT) --train-texts "$(TRAIN_TEXTS)" --config config/compare.yaml --checkpoint results/compare_run/best_model.pt --outdir $(TEXT_OUT)
+
+regime-compare:
+	@test -n "$(UNIFORM)" || (echo "Usage: make regime-compare UNIFORM=.../benchmark_summary.csv NONIID=.../benchmark_summary.csv" && exit 1)
+	@test -n "$(NONIID)" || (echo "Usage: make regime-compare UNIFORM=.../benchmark_summary.csv NONIID=.../benchmark_summary.csv" && exit 1)
+	$(VENV_PY) scripts/plot_regime_comparison.py --uniform-csv "$(UNIFORM)" --non-iid-csv "$(NONIID)" --outdir results/regime_compare
 
 clean:
 	rm -rf $(SMOKE_OUT) $(FULL_OUT) $(BENCH_OUT) $(TEXT_OUT)

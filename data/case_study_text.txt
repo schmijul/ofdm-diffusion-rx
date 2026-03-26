@@ -1,0 +1,3 @@
+In this experiment we transmit a real text payload through OFDM over a fading channel.
+The payload is intentionally non-iid and contains language structure.
+We compare LS+MMSE against Diffusion+MMSE under the same frame realizations.
