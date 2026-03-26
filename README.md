@@ -444,6 +444,8 @@ One-command paths:
 
 `make regime-study-large`
 
+`make pilot-sweep`
+
 Optional speed-up for long runs:
 
 - add `SKIP_PLOTS=1` to defer plotting and only generate numeric summaries first.
@@ -511,6 +513,12 @@ Important receiver-side interpretation:
 - Even after that fix, `Perfect-CSI MMSE` is still far below `LS+MMSE`, so the dominant reason for the remaining high absolute BER is now channel estimation / pilot interpolation, not the equalizer regularization term alone.
 - The x-axis is currently a waveform-level SNR derived from measured time-domain signal power in `add_awgn(...)`; it is not yet presented as an explicit `Eb/N0` axis.
 
+Pilot-density diagnostic:
+
+- A quick sweep over `4`, `8`, and `16` pilots confirms that the classical front-end is strongly pilot-limited.
+- In the uniform large-style setup at `12 dB`, `LS+MMSE` drops from about `0.354` BER with `4` pilots to about `0.126` BER with `16` pilots.
+- Over the same sweep, the gap to `Perfect-CSI MMSE` shrinks from about `0.255` to about `0.030`, which is strong evidence that pilot density / interpolation is the next high-impact improvement.
+
 ### 14.4 Visuals
 
 Main comparison plots (MMSE vs Diffusion):
@@ -529,7 +537,22 @@ Optional delta view (large run, Diffusion - MMSE):
 
 ![Regime delta comparison](imgs/case_study/regime_delta_comparison_large.png)
 
-### 14.5 Prior-Sweep Tooling
+### 14.5 Channel-Estimation Diagnostic
+
+Main entrypoint:
+
+`make pilot-sweep`
+
+This diagnostic varies the number of pilot subcarriers and compares `LS+MMSE` against `Perfect-CSI MMSE`.
+It is intended to answer one practical question quickly:
+
+- Are we limited mainly by the denoiser, or by channel estimation quality?
+
+Main diagnostic plot:
+
+![Pilot sweep estimation gap](imgs/diagnostics/pilot_sweep_estimation_gap.png)
+
+### 14.6 Prior-Sweep Tooling
 
 The repository now also contains a dedicated prior-sweep pipeline so the non-IID hypothesis can be tested as a trend instead of only as a two-point comparison.
 
@@ -549,7 +572,7 @@ Additional outputs:
 - `prior_sweep_summary.md` with trend interpretation
 - `prior_sweep_delta_vs_prior.png` as the main sweep visualization
 
-### 14.6 Customize In 5 Minutes
+### 14.7 Customize In 5 Minutes
 
 For most adaptations, these are the only knobs you need:
 
