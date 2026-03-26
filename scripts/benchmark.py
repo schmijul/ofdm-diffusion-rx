@@ -16,6 +16,7 @@ from src.diffusion.ddpm import DDPM
 from src.diffusion.model import ResidualMLPDenoiser
 from src.diffusion.noise_schedule import NoiseSchedule
 from src.metrics import bit_error_rate
+from src.study_utils import parse_int_list
 from src.utils import get_device, load_config, real_to_complex, set_seed
 
 
@@ -72,9 +73,11 @@ def mean_std(xs: list[float]) -> tuple[float, float]:
 
 def main():
     args = parse_args()
+    if args.n_frames <= 0:
+        raise ValueError("--n-frames must be positive")
     cfg = load_config(args.config)
     device = get_device(cfg)
-    seeds = [int(s.strip()) for s in args.seeds.split(",") if s.strip()]
+    seeds = parse_int_list(args.seeds)
 
     outdir = Path(args.outdir)
     outdir.mkdir(parents=True, exist_ok=True)

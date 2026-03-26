@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.study_utils import load_csv_rows, summarize_delta_curve
+from src.study_utils import load_csv_rows, parse_int_list, summarize_delta_curve
 
 
 def parse_args():
@@ -82,6 +82,16 @@ def run_benchmark(config_path: str, checkpoint: Path, outdir: Path, n_frames: in
 
 def main():
     args = parse_args()
+    if args.n_frames <= 0:
+        raise ValueError("--n-frames must be positive")
+    parse_int_list(args.seeds)
+    if args.epochs is not None and args.epochs <= 0:
+        raise ValueError("--epochs must be positive when provided")
+    if args.n_train is not None and args.n_train <= 0:
+        raise ValueError("--n-train must be positive when provided")
+    if args.n_val is not None and args.n_val <= 0:
+        raise ValueError("--n-val must be positive when provided")
+
     study_root_dir = Path(args.outdir)
     study_root_dir.mkdir(parents=True, exist_ok=True)
 

@@ -344,6 +344,7 @@ Engineering rules:
 
 Convenient local commands:
 
+- `make doctor` for quick environment/dependency sanity checks after clone
 - `make quick-test` for fast unit-test validation
 - `make smoke` for a tiny end-to-end train/evaluate/plot run
 - `make train`, `make evaluate`, `make plot` for default full workflow
@@ -505,6 +506,7 @@ Community note:
 - `benchmark_summary.csv` now includes both
   - `delta_diff_minus_mmse_*` (legacy-compatible)
   - `diffusion_gain_vs_mmse_*` (more explicit alias)
+- Study scripts now validate common input mistakes early (`--n-frames > 0`, valid `--seeds`, valid prior range `(0,1)`).
 
 ## 15. References
 

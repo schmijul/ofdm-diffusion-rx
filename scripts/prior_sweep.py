@@ -12,7 +12,14 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.study_utils import load_csv_rows, parse_float_list, prior_slug, summarize_delta_curve
+from src.study_utils import (
+    load_csv_rows,
+    normalize_unique_bit_priors,
+    parse_float_list,
+    parse_int_list,
+    prior_slug,
+    summarize_delta_curve,
+)
 from src.utils import load_config
 
 
@@ -59,7 +66,17 @@ def train_if_needed(config_path: Path, outdir: Path, args) -> Path:
 
 def main():
     args = parse_args()
-    bit_priors = parse_float_list(args.priors)
+    if args.n_frames <= 0:
+        raise ValueError("--n-frames must be positive")
+    parse_int_list(args.seeds)
+    if args.epochs is not None and args.epochs <= 0:
+        raise ValueError("--epochs must be positive when provided")
+    if args.n_train is not None and args.n_train <= 0:
+        raise ValueError("--n-train must be positive when provided")
+    if args.n_val is not None and args.n_val <= 0:
+        raise ValueError("--n-val must be positive when provided")
+
+    bit_priors = normalize_unique_bit_priors(parse_float_list(args.priors))
 
     outdir = Path(args.outdir)
     config_dir = outdir / "configs"

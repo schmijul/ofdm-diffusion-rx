@@ -7,12 +7,13 @@ BENCH_OUT := results/benchmark
 TEXT_OUT := results/text_benchmark
 PRIOR_GRID := 0.1,0.2,0.3,0.4,0.5
 
-.PHONY: help venv install quick-test test smoke train evaluate plot benchmark text-benchmark regime-compare regime-study-fast regime-study-large regime-study-smoke prior-sweep clean
+.PHONY: help venv install doctor quick-test test smoke train evaluate plot benchmark text-benchmark regime-compare regime-study-fast regime-study-large regime-study-smoke prior-sweep clean
 
 help:
 	@echo "Targets:"
 	@echo "  make venv        - create local virtual env (.venv)"
 	@echo "  make install     - install dependencies into .venv"
+	@echo "  make doctor      - quick environment and dependency sanity checks"
 	@echo "  make quick-test  - run fast unit test suite"
 	@echo "  make test        - alias for quick-test"
 	@echo "  make smoke       - run tiny end-to-end train/eval/plot"
@@ -35,6 +36,11 @@ install:
 	$(VENV_PY) -m pip install --upgrade pip
 	$(VENV_PIP) install --index-url https://download.pytorch.org/whl/cpu torch
 	$(VENV_PIP) install -r requirements.txt
+
+doctor:
+	@test -x "$(VENV_PY)" || (echo "Missing .venv. Run: make venv && make install" && exit 1)
+	$(VENV_PY) -c "import sys; print('python', sys.version.split()[0])"
+	$(VENV_PY) -c "import torch, numpy, yaml, matplotlib, tqdm; print('deps ok')"
 
 quick-test:
 	$(PYTEST) -q
