@@ -2,6 +2,8 @@
 
 A research-oriented PyTorch project that compares classical OFDM receivers against a diffusion-based post-equalization denoiser.
 
+Contributor guide: see `CONTRIBUTING.md`.
+
 Current project snapshot:
 
 - This project contains an end-to-end, reproducible CP-OFDM receiver stack (classical + diffusion post-denoising).
