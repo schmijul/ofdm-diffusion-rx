@@ -442,6 +442,8 @@ One-command paths:
 
 `make regime-study-fast`
 
+`make regime-study-fast-p8`
+
 `make regime-study-large`
 
 `make pilot-sweep`
@@ -518,6 +520,7 @@ Pilot-density diagnostic:
 - A quick sweep over `4`, `8`, and `16` pilots confirms that the classical front-end is strongly pilot-limited.
 - In the uniform large-style setup at `12 dB`, `LS+MMSE` drops from about `0.354` BER with `4` pilots to about `0.126` BER with `16` pilots.
 - Over the same sweep, the gap to `Perfect-CSI MMSE` shrinks from about `0.255` to about `0.030`, which is strong evidence that pilot density / interpolation is the next high-impact improvement.
+- An exploratory `8-pilot` regime study still supports the main hypothesis: uniform remains worse for diffusion (`avg delta ~= +4.36e-02`), while non-IID remains better (`avg delta ~= -4.24e-02`), but with substantially better absolute BER than the original `4-pilot` setup.
 
 ### 14.4 Visuals
 
@@ -551,6 +554,10 @@ It is intended to answer one practical question quickly:
 Main diagnostic plot:
 
 ![Pilot sweep estimation gap](imgs/diagnostics/pilot_sweep_estimation_gap.png)
+
+Related exploratory regime command:
+
+`make regime-study-fast-p8`
 
 ### 14.6 Prior-Sweep Tooling
 
