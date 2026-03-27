@@ -16,6 +16,34 @@ Current project snapshot:
 - Perfect-CSI MMSE remains much better than LS+MMSE, which makes channel estimation and pilot interpolation the next clear classical bottleneck.
 - The README includes reproducible commands, plots, and config files for both regimes.
 
+Latest high-confidence result (new 8-seed confirmation on `fast_p8`):
+
+- Setup: `bit_one_prob=0.2` (non-IID) vs `bit_one_prob=0.5` (uniform control), 8 seeds, 40 frames/seed/SNR, diffusion inference override `--inference-steps 20`.
+- Non-IID aggregate delta (Diffusion - LS+MMSE): `-1.6675e-02` BER, 95% CI `[-1.7909e-02, -1.5453e-02]`, sign-flip `p=7.8125e-03`.
+- Uniform aggregate delta (Diffusion - LS+MMSE): `+2.0184e-02` BER, 95% CI `[1.8609e-02, 2.1649e-02]`, sign-flip `p=7.8125e-03`.
+- Interpretation: diffusion gives a statistically clear gain only in the structured-prior (non-IID) regime, and is statistically worse in the uniform control.
+
+Quick visual check (no delta plot needed to interpret):
+
+- If `Diffusion+MMSE` is below `LS+MMSE`, diffusion helps.
+- In non-IID, the diffusion curve is consistently lower.
+- In uniform, the diffusion curve is consistently higher.
+
+![Non-IID 8-seed BER comparison](imgs/case_study/non_iid_fast_p8_8seed_ber_errorbars.png)
+![Uniform 8-seed BER comparison](imgs/case_study/uniform_fast_p8_8seed_ber_errorbars.png)
+
+Reproduce this confirmation run:
+
+```bash
+.venv/bin/python scripts/run_regime_study.py \
+  --uniform-config config/exp_uniform_fast_p8.yaml \
+  --non-iid-config config/exp_non_iid_fast_p8.yaml \
+  --outdir results/regime_study_fast_p8 \
+  --n-frames 40 \
+  --seeds 1,2,3,4,5,6,7,8 \
+  --inference-steps 20
+```
+
 Main result in one figure:
 
 - The plot compares `LS+MMSE`, `Diffusion+MMSE`, and `Perfect-CSI MMSE`.
