@@ -4,12 +4,13 @@ from src.channel import (
     add_awgn,
     apply_multipath,
     channel_frequency_response,
+    effective_sample_snr_linear,
     generate_rayleigh_taps,
     generate_tdl_a_taps,
 )
 from src.demapper import bits_to_qam16, qam16_to_bits
 from src.equalization import mmse_equalize, zf_equalize
-from src.estimation import interpolate_channel, ls_channel_estimate
+from src.estimation import estimate_channel_response
 from src.metrics import bit_error_rate
 from src.ofdm import (
     build_ofdm_grid,
@@ -42,6 +43,10 @@ def simulate_received_frame(cfg: dict, snr_db: float, bits_tx: torch.Tensor | No
     n_data = data_idx.numel() * n_sym
 
     n_bits_frame = n_data * 4
+    data_fraction = float(data_idx.numel()) / float(n_sc)
+    receiver_cfg = cfg.get("receiver", {})
+    snr_definition = str(receiver_cfg.get("snr_definition", "sample"))
+
     if bits_tx is None:
         p1 = float(cfg.get("modulation", {}).get("bit_one_prob", 0.5))
         if p1 <= 0.0 or p1 >= 1.0:
@@ -61,7 +66,13 @@ def simulate_received_frame(cfg: dict, snr_db: float, bits_tx: torch.Tensor | No
     else:
         taps = generate_rayleigh_taps(n_taps, exp_decay, device)
     rx_time = apply_multipath(tx_time, taps)
-    rx_time, noise_power_time = add_awgn(rx_time, snr_db)
+    rx_time, noise_power_time = add_awgn(
+        rx_time,
+        snr_db,
+        snr_definition=snr_definition,
+        bits_per_symbol=4,
+        data_subcarrier_fraction=data_fraction,
+    )
 
     rx_grid = ofdm_demodulate(rx_time, n_sc, cp)
     noise_power_freq = fft_noise_power(noise_power_time, n_sc)
@@ -79,6 +90,14 @@ def simulate_received_frame(cfg: dict, snr_db: float, bits_tx: torch.Tensor | No
         "noise_power": noise_power_freq,
         "noise_power_time": noise_power_time,
         "noise_power_freq": noise_power_freq,
+        "snr_definition": snr_definition,
+        "snr_sample_linear": effective_sample_snr_linear(
+            snr_db,
+            snr_definition=snr_definition,
+            bits_per_symbol=4,
+            data_subcarrier_fraction=data_fraction,
+        ),
+        "data_subcarrier_fraction": data_fraction,
     }
 
 
@@ -94,8 +113,16 @@ def run_receiver_on_frame(frame: dict, method: str = "ls_mmse", perfect_csi: boo
     if perfect_csi:
         h_hat = h_true
     else:
-        h_p = ls_channel_estimate(rx_grid, pilot_idx)
-        h_hat = interpolate_channel(h_p, pilot_idx, rx_grid.shape[-1])
+        receiver_cfg = frame.get("cfg", {}).get("receiver", {})
+        estimation_method = str(receiver_cfg.get("estimation_method", "linear"))
+        dft_tap_truncation = receiver_cfg.get("dft_tap_truncation", None)
+        h_hat = estimate_channel_response(
+            rx_grid,
+            pilot_idx,
+            rx_grid.shape[-1],
+            method=estimation_method,
+            dft_tap_truncation=dft_tap_truncation,
+        )
 
     if method == "ls_zf":
         x_hat_grid = zf_equalize(rx_grid, h_hat)
@@ -121,6 +148,9 @@ def run_receiver_on_frame(frame: dict, method: str = "ls_mmse", perfect_csi: boo
         "noise_power": noise_power,
         "noise_power_time": frame.get("noise_power_time", noise_power),
         "noise_power_freq": frame.get("noise_power_freq", noise_power),
+        "snr_definition": frame.get("snr_definition", "sample"),
+        "snr_sample_linear": frame.get("snr_sample_linear", None),
+        "data_subcarrier_fraction": frame.get("data_subcarrier_fraction", None),
         "snr_db": frame["snr_db"],
     }
 

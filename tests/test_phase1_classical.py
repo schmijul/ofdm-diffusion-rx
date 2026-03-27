@@ -2,9 +2,10 @@ import copy
 
 import torch
 
+from src.channel import effective_sample_snr_linear
 from src.classical_receiver import run_classical_frame, run_receiver_on_frame, simulate_received_frame
 from src.demapper import bits_to_qam16, qam16_to_bits
-from src.estimation import interpolate_channel, ls_channel_estimate
+from src.estimation import dft_project_channel_response, estimate_channel_response, interpolate_channel, ls_channel_estimate
 from src.ofdm import fft_noise_power, get_pilot_indices
 from src.utils import load_config, set_seed
 
@@ -112,6 +113,47 @@ def test_cyclic_interpolation_handles_band_edge():
 
 def test_fft_noise_power_matches_backward_fft_scaling():
     assert fft_noise_power(0.25, 64) == 16.0
+
+
+def test_dft_projection_zeros_tail_taps():
+    set_seed(13)
+    h_freq = torch.randn(2, 32, dtype=torch.complex64)
+    h_proj = dft_project_channel_response(h_freq, n_taps_keep=5)
+    h_time = torch.fft.ifft(h_proj, dim=-1)
+    assert torch.max(h_time[:, 5:].abs()).item() < 1e-6
+
+
+def test_estimate_channel_response_dft_method_runs():
+    set_seed(14)
+    n_sc = 32
+    pilot_idx = get_pilot_indices(n_sc, 4)
+    y_grid = torch.randn(3, n_sc, dtype=torch.complex64)
+    h_hat = estimate_channel_response(
+        y_grid,
+        pilot_idx,
+        n_sc,
+        method="dft_linear",
+        dft_tap_truncation=6,
+    )
+    assert h_hat.shape == (3, n_sc)
+
+
+def test_ebn0_maps_to_higher_effective_sample_snr_than_sample():
+    sample_linear = effective_sample_snr_linear(10.0, snr_definition="sample", bits_per_symbol=4, data_subcarrier_fraction=0.75)
+    ebn0_linear = effective_sample_snr_linear(10.0, snr_definition="ebn0", bits_per_symbol=4, data_subcarrier_fraction=0.75)
+    assert ebn0_linear > sample_linear
+
+
+def test_frame_exposes_snr_definition_metadata():
+    cfg = copy.deepcopy(load_config())
+    cfg["receiver"]["snr_definition"] = "ebn0"
+    cfg["ofdm"]["n_ofdm_symbols"] = 2
+    frame = simulate_received_frame(cfg, snr_db=10.0)
+
+    data_fraction = frame["data_subcarrier_fraction"]
+    expected = effective_sample_snr_linear(10.0, snr_definition="ebn0", bits_per_symbol=4, data_subcarrier_fraction=data_fraction)
+    assert frame["snr_definition"] == "ebn0"
+    assert abs(frame["snr_sample_linear"] - expected) < 1e-6
 
 
 def test_non_uniform_bit_source_respects_probability():

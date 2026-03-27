@@ -41,9 +41,47 @@ def apply_multipath(x: torch.Tensor, taps: torch.Tensor) -> torch.Tensor:
     return y
 
 
-def add_awgn(x: torch.Tensor, snr_db: float) -> tuple[torch.Tensor, float]:
+def snr_db_to_linear(snr_db: float) -> float:
+    return float(10.0 ** (float(snr_db) / 10.0))
+
+
+def effective_sample_snr_linear(
+    snr_db: float,
+    snr_definition: str = "sample",
+    bits_per_symbol: int = 4,
+    data_subcarrier_fraction: float = 1.0,
+) -> float:
+    if data_subcarrier_fraction <= 0.0 or data_subcarrier_fraction > 1.0:
+        raise ValueError("data_subcarrier_fraction must be in (0,1]")
+    if bits_per_symbol <= 0:
+        raise ValueError("bits_per_symbol must be positive")
+
+    base = snr_db_to_linear(snr_db)
+    mode = str(snr_definition).lower()
+    if mode in {"sample", "sample_snr"}:
+        return base
+    if mode in {"esn0", "esn0_db"}:
+        return base
+    if mode in {"ebn0", "ebn0_db"}:
+        return base * float(bits_per_symbol) * float(data_subcarrier_fraction)
+
+    raise ValueError(f"Unsupported snr_definition: {snr_definition}")
+
+
+def add_awgn(
+    x: torch.Tensor,
+    snr_db: float,
+    snr_definition: str = "sample",
+    bits_per_symbol: int = 4,
+    data_subcarrier_fraction: float = 1.0,
+) -> tuple[torch.Tensor, float]:
     sig_power = x.abs().pow(2).mean().item()
-    snr_linear = 10.0 ** (snr_db / 10.0)
+    snr_linear = effective_sample_snr_linear(
+        snr_db,
+        snr_definition=snr_definition,
+        bits_per_symbol=bits_per_symbol,
+        data_subcarrier_fraction=data_subcarrier_fraction,
+    )
     noise_power = sig_power / snr_linear
     noise_std = (noise_power / 2.0) ** 0.5
 

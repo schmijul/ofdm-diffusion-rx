@@ -21,6 +21,11 @@ channel:
   doppler_hz: 0.0
   exp_decay: 0.7
 
+receiver:
+  estimation_method: linear
+  dft_tap_truncation: 4
+  snr_definition: sample
+
 snr_range_db: [0.0, 5.0]
 snr_step_db: 5.0
 

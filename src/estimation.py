@@ -42,3 +42,36 @@ def interpolate_channel(
         h_full[s] = hr + 1j * hi
 
     return h_full
+
+
+def dft_project_channel_response(h_freq: torch.Tensor, n_taps_keep: int) -> torch.Tensor:
+    if n_taps_keep <= 0:
+        raise ValueError("n_taps_keep must be positive")
+    n_subcarriers = h_freq.shape[-1]
+    if n_taps_keep > n_subcarriers:
+        raise ValueError("n_taps_keep cannot exceed n_subcarriers")
+
+    h_time = torch.fft.ifft(h_freq, dim=-1)
+    h_time[..., n_taps_keep:] = 0.0
+    return torch.fft.fft(h_time, dim=-1).to(torch.complex64)
+
+
+def estimate_channel_response(
+    y_grid: torch.Tensor,
+    pilot_indices: torch.Tensor,
+    n_subcarriers: int,
+    method: str = "linear",
+    dft_tap_truncation: int | None = None,
+) -> torch.Tensor:
+    h_p = ls_channel_estimate(y_grid, pilot_indices)
+    h_lin = interpolate_channel(h_p, pilot_indices, n_subcarriers)
+
+    method_name = str(method).lower()
+    if method_name == "linear":
+        return h_lin
+    if method_name in {"dft", "dft_linear", "dft_projection"}:
+        if dft_tap_truncation is None:
+            raise ValueError("dft_tap_truncation must be set when using dft-based estimation")
+        return dft_project_channel_response(h_lin, int(dft_tap_truncation))
+
+    raise ValueError(f"Unknown channel estimation method: {method}")
