@@ -13,6 +13,7 @@ ofdm:
 modulation:
   order: 16
   bit_one_prob: 0.462
+  bit_one_prob_per_position: [0.155761, 0.651218, 0.671835, 0.367471]
 
 channel:
   model: rayleigh

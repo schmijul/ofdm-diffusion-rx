@@ -35,9 +35,62 @@ def parse_args():
     p.add_argument("--checkpoint", default="results/compare_run/best_model.pt")
     p.add_argument("--outdir", default="results/text_benchmark")
     p.add_argument("--seed", type=int, default=123)
+    p.add_argument(
+        "--diff-prior-weight",
+        type=float,
+        default=0.35,
+        help="Prior strength for optional prior-aware demap in diffusion branch (0 disables)",
+    )
     p.add_argument("--max-bytes", type=int, default=0, help="Optional cap on processed bytes (0 means full file)")
     p.add_argument("--start-byte", type=int, default=0, help="Optional byte offset into the file before slicing")
     return p.parse_args()
+
+
+def _qam16_map_bits_with_priors(symbols: torch.Tensor, bit_one_probs: list[float], prior_weight: float) -> torch.Tensor:
+    if prior_weight <= 0.0:
+        return qam16_to_bits(symbols).long()
+    if len(bit_one_probs) != 4:
+        return qam16_to_bits(symbols).long()
+
+    device = symbols.device
+    dtype = symbols.real.dtype
+    levels = torch.tensor([-3.0, -1.0, 1.0, 3.0], device=device, dtype=dtype) / (10.0**0.5)
+    grid_i, grid_q = torch.meshgrid(levels, levels, indexing="ij")
+    const = grid_i.reshape(-1) + 1j * grid_q.reshape(-1)
+
+    bits_lut = torch.tensor(
+        [
+            [0, 0, 0, 0],
+            [0, 0, 0, 1],
+            [0, 0, 1, 0],
+            [0, 0, 1, 1],
+            [0, 1, 0, 0],
+            [0, 1, 0, 1],
+            [0, 1, 1, 0],
+            [0, 1, 1, 1],
+            [1, 0, 0, 0],
+            [1, 0, 0, 1],
+            [1, 0, 1, 0],
+            [1, 0, 1, 1],
+            [1, 1, 0, 0],
+            [1, 1, 0, 1],
+            [1, 1, 1, 0],
+            [1, 1, 1, 1],
+        ],
+        device=device,
+        dtype=torch.long,
+    )
+
+    probs = torch.tensor(bit_one_probs, device=device, dtype=dtype).clamp(1e-4, 1.0 - 1e-4)
+    logp1 = torch.log(probs).unsqueeze(0)
+    logp0 = torch.log(1.0 - probs).unsqueeze(0)
+    bits_lut_f = bits_lut.to(dtype=dtype)
+    log_prior = torch.sum(bits_lut_f * logp1 + (1.0 - bits_lut_f) * logp0, dim=1)
+
+    dist2 = torch.abs(symbols.unsqueeze(1) - const.unsqueeze(0)).pow(2)
+    score = dist2 - prior_weight * log_prior.unsqueeze(0)
+    best = torch.argmin(score, dim=1)
+    return bits_lut[best].reshape(-1).long()
 
 
 def snr_grid(cfg: dict) -> list[float]:
@@ -111,6 +164,8 @@ def main():
         raise ValueError("--max-bytes must be non-negative")
     if args.start_byte < 0:
         raise ValueError("--start-byte must be non-negative")
+    if args.diff_prior_weight < 0.0:
+        raise ValueError("--diff-prior-weight must be non-negative")
 
     train_paths = [p.strip() for p in args.train_texts.split(",") if p.strip()]
     if train_paths:
@@ -118,6 +173,7 @@ def main():
 
     device = get_device(cfg)
     ddpm = load_diffusion(cfg, Path(args.checkpoint), device)
+    bit_pos_priors = cfg.get("modulation", {}).get("bit_one_prob_per_position", None)
 
     outdir = Path(args.outdir)
     outdir.mkdir(parents=True, exist_ok=True)
@@ -166,7 +222,11 @@ def main():
                 with torch.no_grad():
                     x_dn = ddpm.denoise_from_equalized(x_eq_real, snr_tensor)
                 x_dn_complex = real_to_complex(x_dn.cpu())
-                bits_dn = qam16_to_bits(x_dn_complex).long()
+                bits_dn = _qam16_map_bits_with_priors(
+                    x_dn_complex,
+                    bit_one_probs=bit_pos_priors if isinstance(bit_pos_priors, list) else [],
+                    prior_weight=float(args.diff_prior_weight),
+                )
                 diff_all.append(bits_dn)
             else:
                 diff_all.append(out_mmse["bits_rx"].long())

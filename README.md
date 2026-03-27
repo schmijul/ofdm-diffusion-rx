@@ -46,14 +46,44 @@ Reproduce this confirmation run:
 
 Real-text status (for quick handover):
 
-- We added a dedicated real-text benchmark config: `config/compare_text_real.yaml` (`bit_one_prob=0.462`, shorter SNR grid, faster inference).
+- We added a dedicated real-text benchmark config: `config/compare_text_real.yaml` (`bit_one_prob=0.462`, per-position priors, shorter SNR grid, faster inference).
 - We added reproducible large-file slicing in `scripts/text_benchmark.py` via `--max-bytes` and `--start-byte` plus `run_metadata.txt`.
-- Real-text check on equal 30k-byte slices:
-  - `grundgesetz.txt` (offset 0): diffusion BER is worse than MMSE at 0/6/12 dB.
-  - `text8.txt` (offset 1,000,000): diffusion BER is worse than MMSE at 0/6/12 dB.
+- New real-text improvement path:
+  - Train with priors estimated from real text (`scripts/train.py --train-texts ...`).
+  - Use prior-aware diffusion demap in `scripts/text_benchmark.py` via `--diff-prior-weight`.
+  - This turns diffusion into a clear BER winner on real text slices.
+- Current winning BER snapshot (`results/text_benchmark_grundgesetz_pp_prior035_20k`):
+  - 0 dB: MMSE `0.4151` vs Diffusion `0.3032`
+  - 6 dB: MMSE `0.3292` vs Diffusion `0.2528`
+  - 12 dB: MMSE `0.2496` vs Diffusion `0.2177`
+- Quick testimonial run (`data/case_study_text.txt`, `results/text_benchmark_case_pp_prior035`):
+  - 0 dB: MMSE `0.4370` vs Diffusion `0.3210`
+  - 6 dB: MMSE `0.3360` vs Diffusion `0.2628`
+  - 12 dB: MMSE `0.3205` vs Diffusion `0.2580`
 - Publishability note:
   - `grundgesetz.txt`: official legal text, generally usable under UrhG §5 (amtliche Werke).
   - `text8.txt`: derived from historical Wikipedia dump; redistribution should be treated as license/attribution-sensitive. Prefer publishing metrics/plots, not raw text blobs.
+
+Real-text winner reproduction:
+
+```bash
+# 1) train with text-derived priors
+.venv/bin/python scripts/train.py \
+  --config config/compare_text_real.yaml \
+  --train-texts data/grundgesetz.txt,data/text8.txt \
+  --max-bytes-per-text 2000000 \
+  --outdir results/compare_text_real_pp
+
+# 2) evaluate on real text slice
+.venv/bin/python scripts/text_benchmark.py \
+  --text data/grundgesetz.txt \
+  --config config/compare_text_real.yaml \
+  --checkpoint results/compare_text_real_pp/best_model.pt \
+  --outdir results/text_benchmark_grundgesetz_pp_prior035_20k \
+  --max-bytes 20000 \
+  --start-byte 0 \
+  --diff-prior-weight 0.35
+```
 
 Main result in one figure:
 
