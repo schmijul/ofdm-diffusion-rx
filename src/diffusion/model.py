@@ -3,12 +3,27 @@ import math
 import torch
 import torch.nn as nn
 
+_FREQ_CACHE: dict[tuple[int, str, torch.dtype], torch.Tensor] = {}
+
+
+def _sinusoidal_freqs(half_dim: int, device: torch.device, dtype: torch.dtype) -> torch.Tensor:
+    key = (half_dim, str(device), dtype)
+    cached = _FREQ_CACHE.get(key)
+    if cached is not None and cached.device == device:
+        return cached
+    freqs = torch.exp(
+        -math.log(10000.0) * torch.arange(0, half_dim, device=device, dtype=dtype) / max(half_dim - 1, 1)
+    )
+    _FREQ_CACHE[key] = freqs
+    return freqs
+
 
 def sinusoidal_time_embedding(timesteps: torch.Tensor, dim: int) -> torch.Tensor:
     half = dim // 2
     device = timesteps.device
-    freqs = torch.exp(-math.log(10000.0) * torch.arange(0, half, device=device) / max(half - 1, 1))
-    args = timesteps.float().unsqueeze(1) * freqs.unsqueeze(0)
+    dtype = torch.float32
+    freqs = _sinusoidal_freqs(half, device, dtype)
+    args = timesteps.to(dtype=dtype).unsqueeze(1) * freqs.unsqueeze(0)
     emb = torch.cat([torch.sin(args), torch.cos(args)], dim=1)
     if dim % 2 == 1:
         emb = torch.cat([emb, torch.zeros_like(emb[:, :1])], dim=1)
@@ -45,7 +60,12 @@ class ResidualMLPDenoiser(nn.Module):
 
     def forward(self, x: torch.Tensor, t: torch.Tensor, snr_db: torch.Tensor) -> torch.Tensor:
         h = self.input_proj(x)
-        t_emb = sinusoidal_time_embedding(t, self.time_dim)
+        if t.numel() > 1 and torch.all(t == t[0]):
+            # Benchmark inference repeatedly uses a single timestep per batch.
+            base_emb = sinusoidal_time_embedding(t[:1], self.time_dim)
+            t_emb = base_emb.expand(t.shape[0], -1)
+        else:
+            t_emb = sinusoidal_time_embedding(t, self.time_dim)
         h = h + self.time_proj(t_emb)
 
         gamma = self.snr_to_gamma(snr_db)

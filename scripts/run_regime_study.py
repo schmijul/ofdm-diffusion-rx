@@ -24,6 +24,7 @@ def parse_args():
     p.add_argument("--epochs", type=int, default=None)
     p.add_argument("--n-train", type=int, default=None)
     p.add_argument("--n-val", type=int, default=None)
+    p.add_argument("--inference-steps", type=int, default=None, help="Override diffusion inference steps during benchmarking")
     p.add_argument("--force-train", action="store_true")
     p.add_argument("--skip-plots", action="store_true")
     return p.parse_args()
@@ -51,23 +52,32 @@ def ensure_trained(config_path: str, outdir: Path, args) -> Path:
     return checkpoint
 
 
-def run_benchmark(config_path: str, checkpoint: Path, outdir: Path, n_frames: int, seeds: str, skip_plots: bool) -> Path:
-    run(
-        [
-            sys.executable,
-            "scripts/benchmark.py",
-            "--config",
-            config_path,
-            "--checkpoint",
-            str(checkpoint),
-            "--outdir",
-            str(outdir),
-            "--n-frames",
-            str(n_frames),
-            "--seeds",
-            seeds,
-        ]
-    )
+def run_benchmark(
+    config_path: str,
+    checkpoint: Path,
+    outdir: Path,
+    n_frames: int,
+    seeds: str,
+    skip_plots: bool,
+    inference_steps: int | None,
+) -> Path:
+    cmd = [
+        sys.executable,
+        "scripts/benchmark.py",
+        "--config",
+        config_path,
+        "--checkpoint",
+        str(checkpoint),
+        "--outdir",
+        str(outdir),
+        "--n-frames",
+        str(n_frames),
+        "--seeds",
+        seeds,
+    ]
+    if inference_steps is not None:
+        cmd.extend(["--inference-steps", str(inference_steps)])
+    run(cmd)
     if not skip_plots:
         run(
             [
@@ -82,6 +92,20 @@ def run_benchmark(config_path: str, checkpoint: Path, outdir: Path, n_frames: in
     return outdir / "benchmark_summary.csv"
 
 
+def run_significance(seed_csv: Path, outdir: Path) -> Path:
+    run(
+        [
+            sys.executable,
+            "scripts/significance_report.py",
+            "--csv",
+            str(seed_csv),
+            "--outdir",
+            str(outdir),
+        ]
+    )
+    return outdir / "significance_summary.csv"
+
+
 def main():
     args = parse_args()
     if args.n_frames <= 0:
@@ -93,6 +117,8 @@ def main():
         raise ValueError("--n-train must be positive when provided")
     if args.n_val is not None and args.n_val <= 0:
         raise ValueError("--n-val must be positive when provided")
+    if args.inference_steps is not None and args.inference_steps <= 0:
+        raise ValueError("--inference-steps must be positive when provided")
 
     study_root_dir = Path(args.outdir)
     study_root_dir.mkdir(parents=True, exist_ok=True)
@@ -106,10 +132,22 @@ def main():
     non_iid_checkpoint = ensure_trained(args.non_iid_config, non_iid_dir, args)
 
     uniform_summary_csv = run_benchmark(
-        args.uniform_config, uniform_checkpoint, uniform_dir, args.n_frames, args.seeds, args.skip_plots
+        args.uniform_config,
+        uniform_checkpoint,
+        uniform_dir,
+        args.n_frames,
+        args.seeds,
+        args.skip_plots,
+        args.inference_steps,
     )
     non_iid_summary_csv = run_benchmark(
-        args.non_iid_config, non_iid_checkpoint, non_iid_dir, args.n_frames, args.seeds, args.skip_plots
+        args.non_iid_config,
+        non_iid_checkpoint,
+        non_iid_dir,
+        args.n_frames,
+        args.seeds,
+        args.skip_plots,
+        args.inference_steps,
     )
 
     if not args.skip_plots:
@@ -173,6 +211,13 @@ def main():
         + "\n",
         encoding="utf-8",
     )
+
+    uniform_seed_csv = uniform_dir / "benchmark_seed_summary.csv"
+    non_iid_seed_csv = non_iid_dir / "benchmark_seed_summary.csv"
+    if uniform_seed_csv.exists():
+        run_significance(uniform_seed_csv, uniform_dir)
+    if non_iid_seed_csv.exists():
+        run_significance(non_iid_seed_csv, non_iid_dir)
 
 
 if __name__ == "__main__":

@@ -27,6 +27,7 @@ def parse_args():
     p.add_argument("--outdir", default="results/benchmark")
     p.add_argument("--n-frames", type=int, default=200)
     p.add_argument("--seeds", default="11,22,33")
+    p.add_argument("--inference-steps", type=int, default=None, help="Override diffusion inference steps for benchmarking")
     return p.parse_args()
 
 
@@ -37,7 +38,7 @@ def snr_grid(cfg: dict) -> list[float]:
     return [float(start + i * step) for i in range(n)]
 
 
-def load_diffusion(cfg: dict, checkpoint: Path, device: torch.device):
+def load_diffusion(cfg: dict, checkpoint: Path, device: torch.device, inference_steps: int | None = None):
     if not checkpoint.exists():
         return None
 
@@ -59,7 +60,9 @@ def load_diffusion(cfg: dict, checkpoint: Path, device: torch.device):
         beta_end=float(cfg["diffusion"]["beta_end"]),
         schedule=str(cfg["diffusion"]["schedule"]),
     )
-    return DDPM(model, schedule, device, inference_steps=int(cfg["diffusion"]["inference_steps"]))
+    if inference_steps is None:
+        inference_steps = int(cfg["diffusion"]["inference_steps"])
+    return DDPM(model, schedule, device, inference_steps=int(inference_steps))
 
 
 def mean_std(xs: list[float]) -> tuple[float, float]:
@@ -82,9 +85,14 @@ def main():
     outdir = Path(args.outdir)
     outdir.mkdir(parents=True, exist_ok=True)
 
-    ddpm = load_diffusion(cfg, Path(args.checkpoint), device)
+    if args.inference_steps is not None and args.inference_steps <= 0:
+        raise ValueError("--inference-steps must be positive when provided")
+
+    ddpm = load_diffusion(cfg, Path(args.checkpoint), device, inference_steps=args.inference_steps)
 
     out_csv = outdir / "benchmark_summary.csv"
+    out_seed_csv = outdir / "benchmark_seed_summary.csv"
+    seed_rows: list[list[float | int]] = []
     with out_csv.open("w", encoding="utf-8", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(
@@ -153,6 +161,18 @@ def main():
                     diff_seed = float(torch.tensor(diff_runs).mean().item())
                     diff_seed_means.append(diff_seed)
                     delta_seed_means.append(diff_seed - mmse_seed)
+                    seed_rows.append(
+                        [
+                            snr_db,
+                            int(seed),
+                            zf_seed,
+                            mmse_seed,
+                            genie_seed,
+                            diff_seed,
+                            diff_seed - mmse_seed,
+                            args.n_frames,
+                        ]
+                    )
 
             zf_mean, zf_std = mean_std(zf_seed_means)
             mmse_mean, mmse_std = mean_std(mmse_seed_means)
@@ -188,6 +208,23 @@ def main():
                 f"diff={diff_mean:.4e}±{diff_std:.2e} "
                 f"delta(diff-mmse)={delta_mean:.4e}±{delta_std:.2e}"
             )
+
+    if seed_rows:
+        with out_seed_csv.open("w", encoding="utf-8", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(
+                [
+                    "snr_db",
+                    "seed",
+                    "ls_zf_seed_mean",
+                    "ls_mmse_seed_mean",
+                    "perfect_mmse_seed_mean",
+                    "diffusion_mmse_seed_mean",
+                    "delta_diff_minus_mmse_seed_mean",
+                    "n_frames",
+                ]
+            )
+            writer.writerows(seed_rows)
 
 
 if __name__ == "__main__":

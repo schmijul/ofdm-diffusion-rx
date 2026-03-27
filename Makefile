@@ -7,7 +7,7 @@ BENCH_OUT := results/benchmark
 TEXT_OUT := results/text_benchmark
 PRIOR_GRID := 0.1,0.2,0.3,0.4,0.5
 
-.PHONY: help venv install doctor quick-test test smoke train evaluate plot benchmark text-benchmark regime-compare regime-study-fast regime-study-fast-p8 regime-study-large regime-study-smoke prior-sweep prior-sweep-large prior-sweep-smoke pilot-sweep frontend-compare summarize-regime clean
+.PHONY: help venv install doctor quick-test test smoke train evaluate plot benchmark text-benchmark regime-compare regime-study-fast regime-study-fast-p8 regime-study-fast-p8-8seed regime-study-large regime-study-conference regime-study-smoke prior-sweep prior-sweep-large prior-sweep-smoke pilot-sweep frontend-compare summarize-regime clean
 
 help:
 	@echo "Targets:"
@@ -25,7 +25,9 @@ help:
 	@echo "  make regime-compare UNIFORM=csv NONIID=csv - compare diffusion gain across priors"
 	@echo "  make regime-study-fast  - train/benchmark uniform vs non-IID fast configs"
 	@echo "  make regime-study-fast-p8 - fast uniform vs non-IID study with 8 pilot subcarriers"
+	@echo "  make regime-study-fast-p8-8seed - stronger fast_p8 confirmation with 8 seeds"
 	@echo "  make regime-study-large - train/benchmark uniform vs non-IID large configs"
+	@echo "  make regime-study-conference - high-evidence non-IID vs uniform run with stronger settings"
 	@echo "  make regime-study-smoke - tiny end-to-end validation of the regime-study pipeline"
 	@echo "  make prior-sweep        - sweep bit priors and plot diffusion gain trend (set SKIP_PLOTS=1 to speed up)"
 	@echo "  make prior-sweep-large  - stronger prior sweep with larger base config and seed set"
@@ -34,6 +36,7 @@ help:
 	@echo "  make frontend-compare   - compare regime-study outputs across front-end variants"
 	@echo "  make summarize-regime UNIFORM=csv NONIID=csv OUTDIR=dir - summarize existing regime CSVs"
 	@echo "  Add FORCE_TRAIN=1 to retrain and ignore existing checkpoints"
+	@echo "  Add INF_STEPS=<n> to override diffusion inference steps in regime-study runs"
 	@echo "  make clean       - remove smoke/full result folders"
 
 venv:
@@ -81,13 +84,19 @@ regime-compare:
 	$(VENV_PY) scripts/plot_regime_comparison.py --uniform-csv "$(UNIFORM)" --non-iid-csv "$(NONIID)" --outdir results/regime_compare
 
 regime-study-fast:
-	$(VENV_PY) scripts/run_regime_study.py --uniform-config config/exp_uniform_fast.yaml --non-iid-config config/exp_non_iid_fast.yaml --outdir results/regime_study_fast --n-frames 30 --seeds 1,2 $(if $(SKIP_PLOTS),--skip-plots) $(if $(FORCE_TRAIN),--force-train)
+	$(VENV_PY) scripts/run_regime_study.py --uniform-config config/exp_uniform_fast.yaml --non-iid-config config/exp_non_iid_fast.yaml --outdir results/regime_study_fast --n-frames 30 --seeds 1,2 $(if $(INF_STEPS),--inference-steps $(INF_STEPS)) $(if $(SKIP_PLOTS),--skip-plots) $(if $(FORCE_TRAIN),--force-train)
 
 regime-study-fast-p8:
-	$(VENV_PY) scripts/run_regime_study.py --uniform-config config/exp_uniform_fast_p8.yaml --non-iid-config config/exp_non_iid_fast_p8.yaml --outdir results/regime_study_fast_p8 --n-frames 30 --seeds 1,2 $(if $(SKIP_PLOTS),--skip-plots) $(if $(FORCE_TRAIN),--force-train)
+	$(VENV_PY) scripts/run_regime_study.py --uniform-config config/exp_uniform_fast_p8.yaml --non-iid-config config/exp_non_iid_fast_p8.yaml --outdir results/regime_study_fast_p8 --n-frames 30 --seeds 1,2 $(if $(INF_STEPS),--inference-steps $(INF_STEPS)) $(if $(SKIP_PLOTS),--skip-plots) $(if $(FORCE_TRAIN),--force-train)
+
+regime-study-fast-p8-8seed:
+	$(VENV_PY) scripts/run_regime_study.py --uniform-config config/exp_uniform_fast_p8.yaml --non-iid-config config/exp_non_iid_fast_p8.yaml --outdir results/regime_study_fast_p8 --n-frames 40 --seeds 1,2,3,4,5,6,7,8 --inference-steps $(if $(INF_STEPS),$(INF_STEPS),20) $(if $(SKIP_PLOTS),--skip-plots) $(if $(FORCE_TRAIN),--force-train)
 
 regime-study-large:
-	$(VENV_PY) scripts/run_regime_study.py --uniform-config config/exp_uniform_large.yaml --non-iid-config config/exp_non_iid_large.yaml --outdir results/regime_study_large --n-frames 120 --seeds 1,2,3 $(if $(SKIP_PLOTS),--skip-plots) $(if $(FORCE_TRAIN),--force-train)
+	$(VENV_PY) scripts/run_regime_study.py --uniform-config config/exp_uniform_large.yaml --non-iid-config config/exp_non_iid_large.yaml --outdir results/regime_study_large --n-frames 120 --seeds 1,2,3 $(if $(INF_STEPS),--inference-steps $(INF_STEPS)) $(if $(SKIP_PLOTS),--skip-plots) $(if $(FORCE_TRAIN),--force-train)
+
+regime-study-conference:
+	$(VENV_PY) scripts/run_regime_study.py --uniform-config config/exp_uniform_conference.yaml --non-iid-config config/exp_non_iid_conference.yaml --outdir results/regime_study_conference --n-frames 120 --seeds 1,2,3,4,5 $(if $(INF_STEPS),--inference-steps $(INF_STEPS)) $(if $(SKIP_PLOTS),--skip-plots) $(if $(FORCE_TRAIN),--force-train)
 
 regime-study-smoke:
 	$(VENV_PY) scripts/run_regime_study.py --uniform-config config/exp_uniform_fast.yaml --non-iid-config config/exp_non_iid_fast.yaml --outdir results/regime_study_smoke --epochs 1 --n-train 128 --n-val 64 --n-frames 2 --seeds 1 $(if $(SKIP_PLOTS),--skip-plots) $(if $(FORCE_TRAIN),--force-train)
