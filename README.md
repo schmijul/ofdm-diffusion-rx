@@ -448,6 +448,8 @@ One-command paths:
 
 `make pilot-sweep`
 
+`make frontend-compare`
+
 Optional speed-up for long runs:
 
 - add `SKIP_PLOTS=1` to defer plotting and only generate numeric summaries first.
@@ -513,7 +515,8 @@ Important receiver-side interpretation:
 
 - The FFT/MMSE noise-scaling bug in the classical chain has been fixed, so these numbers reflect a consistent time-domain-to-frequency-domain noise model.
 - Even after that fix, `Perfect-CSI MMSE` is still far below `LS+MMSE`, so the dominant reason for the remaining high absolute BER is now channel estimation / pilot interpolation, not the equalizer regularization term alone.
-- The x-axis is currently a waveform-level SNR derived from measured time-domain signal power in `add_awgn(...)`; it is not yet presented as an explicit `Eb/N0` axis.
+- The receiver now supports explicit `snr_definition` modes: `sample`, `esn0`, `ebn0` (config path: `receiver.snr_definition`).
+- For `ebn0`, the effective sample-domain SNR is converted using modulation order and data-subcarrier fraction so Eb/N0-vs-Es/N0 mismatch can be controlled explicitly.
 
 Pilot-density diagnostic:
 
@@ -521,6 +524,7 @@ Pilot-density diagnostic:
 - In the uniform large-style setup at `12 dB`, `LS+MMSE` drops from about `0.354` BER with `4` pilots to about `0.126` BER with `16` pilots.
 - Over the same sweep, the gap to `Perfect-CSI MMSE` shrinks from about `0.255` to about `0.030`, which is strong evidence that pilot density / interpolation is the next high-impact improvement.
 - An exploratory `8-pilot` regime study still supports the main hypothesis: uniform remains worse for diffusion (`avg delta ~= +4.36e-02`), while non-IID remains better (`avg delta ~= -4.24e-02`), but with substantially better absolute BER than the original `4-pilot` setup.
+- Front-end comparison summary (`4` vs `8` pilots) confirms this tradeoff: stronger front-end lowers absolute `LS+MMSE` BER for both regimes, but non-IID diffusion gain keeps the same sign.
 
 ### 14.4 Visuals
 
@@ -559,6 +563,14 @@ Related exploratory regime command:
 
 `make regime-study-fast-p8`
 
+Front-end comparison command:
+
+`make frontend-compare`
+
+Front-end comparison plot:
+
+![Front-end regime delta comparison](imgs/diagnostics/frontend_regime_delta_comparison.png)
+
 ### 14.6 Prior-Sweep Tooling
 
 The repository now also contains a dedicated prior-sweep pipeline so the non-IID hypothesis can be tested as a trend instead of only as a two-point comparison.
@@ -566,6 +578,10 @@ The repository now also contains a dedicated prior-sweep pipeline so the non-IID
 Main entrypoint:
 
 `make prior-sweep`
+
+Stronger variant:
+
+`make prior-sweep-large`
 
 Optional speed-up:
 
@@ -578,6 +594,8 @@ Additional outputs:
 
 - `prior_sweep_summary.md` with trend interpretation
 - `prior_sweep_delta_vs_prior.png` as the main sweep visualization
+- `prior_sweep_avg_delta_errorbars.png` for average delta with uncertainty proxy
+- `prior_sweep_absolute_ber_vs_prior.png` for absolute BER trends (`LS+MMSE` vs `Diffusion+MMSE`)
 
 ### 14.7 Customize In 5 Minutes
 
@@ -589,13 +607,16 @@ For most adaptations, these are the only knobs you need:
 2. Change channel regime:
 `config/... -> channel.model` (`rayleigh` or `tdl_a`) and tap settings
 
-3. Change model capacity:
+3. Receiver assumptions:
+`config/... -> receiver.estimation_method` (`linear` or `dft_linear`), `receiver.dft_tap_truncation`, `receiver.snr_definition` (`sample`, `esn0`, `ebn0`)
+
+4. Change model capacity:
 `config/... -> diffusion.model.hidden_dim`, `n_res_blocks`, `time_embedding_dim`
 
-4. Change training budget:
+5. Change training budget:
 `config/... -> training.n_train_samples`, `n_val_samples`, `epochs`
 
-5. Change evaluation cost/stability:
+6. Change evaluation cost/stability:
 benchmark CLI args `--n-frames` and `--seeds`
 
 Community note:

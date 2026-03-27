@@ -66,6 +66,28 @@ def train_if_needed(config_path: Path, outdir: Path, args) -> Path:
     return checkpoint
 
 
+def summarize_benchmark(path: Path) -> dict:
+    rows = load_csv_rows(path)
+    if not rows:
+        raise ValueError(f"Benchmark CSV has no rows: {path}")
+
+    deltas = [float(r["delta_diff_minus_mmse_mean"]) for r in rows]
+    delta_stds = [float(r["delta_diff_minus_mmse_std"]) for r in rows]
+    mmse_values = [float(r["ls_mmse_mean"]) for r in rows]
+    diff_values = [float(r["diffusion_mmse_mean"]) for r in rows]
+
+    n = len(rows)
+    return {
+        "avg_delta": float(sum(deltas) / n),
+        "avg_delta_std_proxy": float(sum(delta_stds) / n),
+        "avg_mmse": float(sum(mmse_values) / n),
+        "avg_diffusion": float(sum(diff_values) / n),
+        "snr_min_db": float(min(float(r["snr_db"]) for r in rows)),
+        "snr_max_db": float(max(float(r["snr_db"]) for r in rows)),
+        "n_snrs": n,
+    }
+
+
 def main():
     args = parse_args()
     if args.n_frames <= 0:
@@ -114,12 +136,16 @@ def main():
             ]
         )
 
+        benchmark_summary = summarize_benchmark(study_dir / "benchmark_summary.csv")
         delta_summary = summarize_delta_curve(load_csv_rows(study_dir / "benchmark_summary.csv"))
         summary_rows.append(
             {
                 "bit_one_prob": float(bit_one_prob),
                 "prior_skew": abs(float(bit_one_prob) - 0.5),
                 "avg_delta": delta_summary["avg_delta"],
+                "avg_delta_std_proxy": benchmark_summary["avg_delta_std_proxy"],
+                "avg_mmse": benchmark_summary["avg_mmse"],
+                "avg_diffusion": benchmark_summary["avg_diffusion"],
                 "best_delta": delta_summary["best_delta"],
                 "worst_delta": delta_summary["worst_delta"],
                 "snr_min_db": delta_summary["snr_min_db"],
@@ -132,16 +158,23 @@ def main():
 
     csv_path = outdir / "prior_sweep_summary.csv"
     with csv_path.open("w", encoding="utf-8") as f:
-        f.write("bit_one_prob,prior_skew,avg_delta,best_delta,worst_delta,snr_min_db,snr_max_db,n_snrs\n")
+        f.write(
+            "bit_one_prob,prior_skew,avg_delta,avg_delta_std_proxy,avg_mmse,avg_diffusion,"
+            "best_delta,worst_delta,snr_min_db,snr_max_db,n_snrs\n"
+        )
         for row in summary_rows:
             f.write(
-                f"{row['bit_one_prob']},{row['prior_skew']},{row['avg_delta']},{row['best_delta']},"
+                f"{row['bit_one_prob']},{row['prior_skew']},{row['avg_delta']},{row['avg_delta_std_proxy']},"
+                f"{row['avg_mmse']},{row['avg_diffusion']},{row['best_delta']},"
                 f"{row['worst_delta']},{row['snr_min_db']},{row['snr_max_db']},{row['n_snrs']}\n"
             )
 
     bit_one_prob_values = [row["bit_one_prob"] for row in summary_rows]
     prior_skew_values = [row["prior_skew"] for row in summary_rows]
     average_delta_values = [row["avg_delta"] for row in summary_rows]
+    avg_delta_std_proxy_values = [row["avg_delta_std_proxy"] for row in summary_rows]
+    avg_mmse_values = [row["avg_mmse"] for row in summary_rows]
+    avg_diffusion_values = [row["avg_diffusion"] for row in summary_rows]
     best_delta_values = [row["best_delta"] for row in summary_rows]
     slope_avg_delta_vs_skew = linear_slope(prior_skew_values, average_delta_values) if len(summary_rows) >= 2 else float("nan")
 
@@ -160,7 +193,41 @@ def main():
         plt.savefig(outdir / "prior_sweep_delta_vs_prior.pdf")
         plt.close()
 
+        plt.figure(figsize=(7.2, 4.8))
+        plt.axhline(0.0, color="black", linewidth=1.0)
+        plt.errorbar(
+            bit_one_prob_values,
+            average_delta_values,
+            yerr=avg_delta_std_proxy_values,
+            marker="o",
+            capsize=3,
+            label="Average delta over SNR (+/- proxy std)",
+        )
+        plt.xlabel("Bit-one prior probability")
+        plt.ylabel("Delta BER (Diffusion - MMSE)")
+        plt.title("Diffusion Gain vs Bit Prior (with uncertainty proxy)")
+        plt.grid(True, alpha=0.3)
+        plt.legend()
+        plt.tight_layout()
+        plt.savefig(outdir / "prior_sweep_avg_delta_errorbars.png", dpi=160)
+        plt.savefig(outdir / "prior_sweep_avg_delta_errorbars.pdf")
+        plt.close()
+
+        plt.figure(figsize=(7.2, 4.8))
+        plt.plot(bit_one_prob_values, avg_mmse_values, marker="s", label="Average LS+MMSE BER")
+        plt.plot(bit_one_prob_values, avg_diffusion_values, marker="d", label="Average Diffusion+MMSE BER")
+        plt.xlabel("Bit-one prior probability")
+        plt.ylabel("Average BER over SNR grid")
+        plt.title("Absolute BER vs Bit Prior")
+        plt.grid(True, alpha=0.3)
+        plt.legend()
+        plt.tight_layout()
+        plt.savefig(outdir / "prior_sweep_absolute_ber_vs_prior.png", dpi=160)
+        plt.savefig(outdir / "prior_sweep_absolute_ber_vs_prior.pdf")
+        plt.close()
+
     summary_md = outdir / "prior_sweep_summary.md"
+    best_prior = min(summary_rows, key=lambda row: row["avg_delta"])
     summary_md.write_text(
         "\n".join(
             [
@@ -168,7 +235,9 @@ def main():
                 "",
                 f"- Number of priors: {len(summary_rows)}",
                 f"- Slope avg_delta vs prior_skew: {slope_avg_delta_vs_skew:.4e}",
+                f"- Best prior by avg_delta: p(bit=1)={best_prior['bit_one_prob']:.3f} (avg_delta={best_prior['avg_delta']:.4e})",
                 "- Interpretation: more negative slope means diffusion gains increase as priors become more skewed.",
+                "- avg_delta_std_proxy is the mean of per-SNR benchmark delta std values and indicates stability of the gain trend.",
             ]
         )
         + "\n",
