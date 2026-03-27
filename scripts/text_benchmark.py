@@ -41,6 +41,12 @@ def parse_args():
         default=0.35,
         help="Prior strength for optional prior-aware demap in diffusion branch (0 disables)",
     )
+    p.add_argument(
+        "--mmse-prior-weight",
+        type=float,
+        default=0.0,
+        help="Prior strength for optional prior-aware demap in MMSE branch (0 disables)",
+    )
     p.add_argument("--max-bytes", type=int, default=0, help="Optional cap on processed bytes (0 means full file)")
     p.add_argument("--start-byte", type=int, default=0, help="Optional byte offset into the file before slicing")
     return p.parse_args()
@@ -166,6 +172,8 @@ def main():
         raise ValueError("--start-byte must be non-negative")
     if args.diff_prior_weight < 0.0:
         raise ValueError("--diff-prior-weight must be non-negative")
+    if args.mmse_prior_weight < 0.0:
+        raise ValueError("--mmse-prior-weight must be non-negative")
 
     train_paths = [p.strip() for p in args.train_texts.split(",") if p.strip()]
     if train_paths:
@@ -202,6 +210,7 @@ def main():
     for snr_db in snr_grid(cfg):
         tx_all = []
         mmse_all = []
+        mmse_prior_all = []
         diff_all = []
 
         for frame_idx in range(n_frames):
@@ -214,6 +223,13 @@ def main():
 
             tx_all.append(out_mmse["bits_tx"].long())
             mmse_all.append(out_mmse["bits_rx"].long())
+            mmse_prior_all.append(
+                _qam16_map_bits_with_priors(
+                    out_mmse["equalized_symbols"],
+                    bit_one_probs=bit_pos_priors if isinstance(bit_pos_priors, list) else [],
+                    prior_weight=float(args.mmse_prior_weight),
+                )
+            )
 
             if ddpm is not None:
                 x_eq = out_mmse["equalized_symbols"].to(device)
@@ -233,43 +249,55 @@ def main():
 
         tx_bits = torch.cat(tx_all)[: bits.numel()]
         mmse_bits = torch.cat(mmse_all)[: bits.numel()]
+        mmse_prior_bits = torch.cat(mmse_prior_all)[: bits.numel()]
         diff_bits = torch.cat(diff_all)[: bits.numel()]
 
         mmse_ber = bit_error_rate(tx_bits, mmse_bits)
+        mmse_prior_ber = bit_error_rate(tx_bits, mmse_prior_bits)
         diff_ber = bit_error_rate(tx_bits, diff_bits)
 
         ref_bytes = bits_to_bytes(tx_bits)
         mmse_bytes = bits_to_bytes(mmse_bits)
+        mmse_prior_bytes = bits_to_bytes(mmse_prior_bits)
         diff_bytes = bits_to_bytes(diff_bits)
 
         mmse_ber_byte = byte_error_rate(ref_bytes, mmse_bytes)
+        mmse_prior_ber_byte = byte_error_rate(ref_bytes, mmse_prior_bytes)
         diff_ber_byte = byte_error_rate(ref_bytes, diff_bytes)
 
         mmse_text = mmse_bytes.decode("utf-8", errors="replace")
+        mmse_prior_text = mmse_prior_bytes.decode("utf-8", errors="replace")
         diff_text = diff_bytes.decode("utf-8", errors="replace")
 
         mmse_char = char_mismatch_rate(ref_text, mmse_text)
+        mmse_prior_char = char_mismatch_rate(ref_text, mmse_prior_text)
         diff_char = char_mismatch_rate(ref_text, diff_text)
 
         rows.append(
             {
                 "snr_db": snr_db,
                 "mmse_ber": mmse_ber,
+                "mmse_prior_ber": mmse_prior_ber,
                 "diff_ber": diff_ber,
                 "mmse_byte_error": mmse_ber_byte,
+                "mmse_prior_byte_error": mmse_prior_ber_byte,
                 "diff_byte_error": diff_ber_byte,
                 "mmse_char_mismatch": mmse_char,
+                "mmse_prior_char_mismatch": mmse_prior_char,
                 "diff_char_mismatch": diff_char,
             }
         )
 
         (recon_dir / f"mmse_snr_{snr_db:.1f}.txt").write_text(mmse_text, encoding="utf-8", errors="replace")
+        (recon_dir / f"mmse_prior_snr_{snr_db:.1f}.txt").write_text(
+            mmse_prior_text, encoding="utf-8", errors="replace"
+        )
         (recon_dir / f"diffusion_snr_{snr_db:.1f}.txt").write_text(diff_text, encoding="utf-8", errors="replace")
 
         print(
             f"snr={snr_db:.1f} "
-            f"ber(mmse={mmse_ber:.4e}, diff={diff_ber:.4e}) "
-            f"byte(mmse={mmse_ber_byte:.4e}, diff={diff_ber_byte:.4e})"
+            f"ber(mmse={mmse_ber:.4e}, mmse_prior={mmse_prior_ber:.4e}, diff={diff_ber:.4e}) "
+            f"byte(mmse={mmse_ber_byte:.4e}, mmse_prior={mmse_prior_ber_byte:.4e}, diff={diff_ber_byte:.4e})"
         )
 
     csv_path = outdir / "text_metrics.csv"
@@ -279,10 +307,13 @@ def main():
             fieldnames=[
                 "snr_db",
                 "mmse_ber",
+                "mmse_prior_ber",
                 "diff_ber",
                 "mmse_byte_error",
+                "mmse_prior_byte_error",
                 "diff_byte_error",
                 "mmse_char_mismatch",
+                "mmse_prior_char_mismatch",
                 "diff_char_mismatch",
             ],
         )
@@ -303,6 +334,8 @@ def main():
                 f"config={args.config}",
                 f"checkpoint={args.checkpoint}",
                 f"seed={args.seed}",
+                f"diff_prior_weight={args.diff_prior_weight}",
+                f"mmse_prior_weight={args.mmse_prior_weight}",
             ]
         )
         + "\n",

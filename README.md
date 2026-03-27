@@ -85,6 +85,29 @@ Real-text winner reproduction:
   --diff-prior-weight 0.35
 ```
 
+Paper-fair ablation update (additional controls):
+
+- We added a fair control in `scripts/text_benchmark.py`: `--mmse-prior-weight`.
+- This enables direct comparison of:
+  - `LS+MMSE` (no prior demap)
+  - `LS+MMSE + prior-aware demap`
+  - `Diffusion+MMSE + prior-aware demap`
+- On `grundgesetz` (`20k` bytes, offset `0`, seeds `1,2,3`, both prior weights `0.35`):
+  - Mean BER `LS+MMSE`: `0.3268`
+  - Mean BER `LS+MMSE + prior-aware demap`: `0.2446` (best)
+  - Mean BER `Diffusion+MMSE + prior-aware demap`: `0.2560`
+- Ablation without priors (`diff_prior_weight=0`, `mmse_prior_weight=0`) on same setup:
+  - Mean BER `LS+MMSE`: `0.3268`
+  - Mean BER `Diffusion+MMSE`: `0.3351` (worse)
+- `text8` seed-1 sanity check shows the same direction:
+  - Fair: `0.3296` (MMSE), `0.2452` (MMSE+prior), `0.2560` (Diffusion+prior)
+  - No-prior: `0.3296` (MMSE), `0.3361` (Diffusion)
+
+Interpretation for paper framing:
+
+- Real-text BER gains in the current setup are primarily explained by prior-aware demapping.
+- Diffusion still helps relative to plain MMSE, but does not beat the fair MMSE+prior control yet.
+
 Main result in one figure:
 
 - The plot compares `LS+MMSE`, `Diffusion+MMSE`, and `Perfect-CSI MMSE`.
