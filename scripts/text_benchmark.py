@@ -35,6 +35,8 @@ def parse_args():
     p.add_argument("--checkpoint", default="results/compare_run/best_model.pt")
     p.add_argument("--outdir", default="results/text_benchmark")
     p.add_argument("--seed", type=int, default=123)
+    p.add_argument("--max-bytes", type=int, default=0, help="Optional cap on processed bytes (0 means full file)")
+    p.add_argument("--start-byte", type=int, default=0, help="Optional byte offset into the file before slicing")
     return p.parse_args()
 
 
@@ -105,6 +107,10 @@ def main():
     test_path = Path(args.text)
     if not test_path.exists():
         raise FileNotFoundError(f"Test text not found: {test_path}")
+    if args.max_bytes < 0:
+        raise ValueError("--max-bytes must be non-negative")
+    if args.start_byte < 0:
+        raise ValueError("--start-byte must be non-negative")
 
     train_paths = [p.strip() for p in args.train_texts.split(",") if p.strip()]
     if train_paths:
@@ -118,7 +124,15 @@ def main():
     recon_dir = outdir / "reconstructed"
     recon_dir.mkdir(parents=True, exist_ok=True)
 
-    raw = test_path.read_bytes()
+    full_raw = test_path.read_bytes()
+    if args.start_byte > len(full_raw):
+        raise ValueError("--start-byte is beyond end of file")
+    raw = full_raw[args.start_byte :]
+    if args.max_bytes > 0:
+        raw = raw[: args.max_bytes]
+    if not raw:
+        raise ValueError("Selected byte range is empty")
+
     ref_text = raw.decode("utf-8", errors="replace")
     bits = bytes_to_bits(raw)
 
@@ -214,6 +228,26 @@ def main():
         )
         writer.writeheader()
         writer.writerows(rows)
+
+    metadata_path = outdir / "run_metadata.txt"
+    metadata_path.write_text(
+        "\n".join(
+            [
+                f"test_file={test_path}",
+                f"file_size_bytes={len(full_raw)}",
+                f"start_byte={args.start_byte}",
+                f"max_bytes={args.max_bytes}",
+                f"processed_bytes={len(raw)}",
+                f"n_bits={bits.numel()}",
+                f"n_frames={n_frames}",
+                f"config={args.config}",
+                f"checkpoint={args.checkpoint}",
+                f"seed={args.seed}",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
     plot_metric(
         rows,

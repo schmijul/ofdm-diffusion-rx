@@ -7,7 +7,7 @@ BENCH_OUT := results/benchmark
 TEXT_OUT := results/text_benchmark
 PRIOR_GRID := 0.1,0.2,0.3,0.4,0.5
 
-.PHONY: help venv install doctor quick-test test smoke train evaluate plot benchmark text-benchmark regime-compare regime-study-fast regime-study-fast-p8 regime-study-fast-p8-8seed regime-study-large regime-study-conference regime-study-smoke prior-sweep prior-sweep-large prior-sweep-smoke pilot-sweep frontend-compare summarize-regime clean
+.PHONY: help venv install doctor quick-test test smoke train evaluate plot benchmark text-benchmark text-train-real text-benchmark-real regime-compare regime-study-fast regime-study-fast-p8 regime-study-fast-p8-8seed regime-study-large regime-study-conference regime-study-smoke prior-sweep prior-sweep-large prior-sweep-smoke pilot-sweep frontend-compare summarize-regime clean
 
 help:
 	@echo "Targets:"
@@ -22,6 +22,8 @@ help:
 	@echo "  make plot        - generate plots from default eval CSV"
 	@echo "  make benchmark   - multi-seed BER benchmark summary"
 	@echo "  make text-benchmark TEXT=path - run .txt transmission benchmark with leak guard"
+	@echo "  make text-train-real - train text-oriented checkpoint (bit_one_prob~0.462)"
+	@echo "  make text-benchmark-real TEXT=path - run text benchmark with real-text config/checkpoint"
 	@echo "  make regime-compare UNIFORM=csv NONIID=csv - compare diffusion gain across priors"
 	@echo "  make regime-study-fast  - train/benchmark uniform vs non-IID fast configs"
 	@echo "  make regime-study-fast-p8 - fast uniform vs non-IID study with 8 pilot subcarriers"
@@ -76,7 +78,14 @@ benchmark:
 
 text-benchmark:
 	@test -n "$(TEXT)" || (echo "Usage: make text-benchmark TEXT=path/to/test.txt [TRAIN_TEXTS=comma,separated,paths]" && exit 1)
-	$(VENV_PY) scripts/text_benchmark.py --text $(TEXT) --train-texts "$(TRAIN_TEXTS)" --config config/compare.yaml --checkpoint results/compare_run/best_model.pt --outdir $(TEXT_OUT)
+	$(VENV_PY) scripts/text_benchmark.py --text $(TEXT) --train-texts "$(TRAIN_TEXTS)" --config config/compare.yaml --checkpoint results/compare_run/best_model.pt --outdir $(TEXT_OUT) $(if $(MAX_BYTES),--max-bytes $(MAX_BYTES)) $(if $(START_BYTE),--start-byte $(START_BYTE))
+
+text-train-real:
+	$(VENV_PY) scripts/train.py --config config/compare_text_real.yaml --outdir results/compare_text_real
+
+text-benchmark-real:
+	@test -n "$(TEXT)" || (echo "Usage: make text-benchmark-real TEXT=path/to/test.txt [TRAIN_TEXTS=comma,separated,paths] [MAX_BYTES=n] [START_BYTE=n]" && exit 1)
+	$(VENV_PY) scripts/text_benchmark.py --text $(TEXT) --train-texts "$(TRAIN_TEXTS)" --config config/compare_text_real.yaml --checkpoint results/compare_text_real/best_model.pt --outdir $(TEXT_OUT)_real $(if $(MAX_BYTES),--max-bytes $(MAX_BYTES)) $(if $(START_BYTE),--start-byte $(START_BYTE))
 
 regime-compare:
 	@test -n "$(UNIFORM)" || (echo "Usage: make regime-compare UNIFORM=.../benchmark_summary.csv NONIID=.../benchmark_summary.csv" && exit 1)
