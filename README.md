@@ -108,6 +108,24 @@ Interpretation for paper framing:
 - Real-text BER gains in the current setup are primarily explained by prior-aware demapping.
 - Diffusion still helps relative to plain MMSE, but does not beat the fair MMSE+prior control yet.
 
+Long-run paper ablation (resumable):
+
+- Use `scripts/paper_fair_ablation.py` for multi-hour, resumable runs that combine:
+  - stronger text-oriented training (`config/compare_text_real_long.yaml`)
+  - fair ablation sweep over prior weights and seeds
+  - per-run and aggregated CSV summaries
+- One-command shortcut:
+
+```bash
+make paper-fair-ablation
+```
+
+- Outputs:
+  - `results/paper_long_run/train/best_model.pt`
+  - `results/paper_long_run/summary.csv`
+  - `results/paper_long_run/summary_agg.csv`
+  - `results/paper_long_run/manifest.json`
+
 Main result in one figure:
 
 - The plot compares `LS+MMSE`, `Diffusion+MMSE`, and `Perfect-CSI MMSE`.
