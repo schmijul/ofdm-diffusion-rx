@@ -44,6 +44,17 @@ Reproduce this confirmation run:
   --inference-steps 20
 ```
 
+Real-text status (for quick handover):
+
+- We added a dedicated real-text benchmark config: `config/compare_text_real.yaml` (`bit_one_prob=0.462`, shorter SNR grid, faster inference).
+- We added reproducible large-file slicing in `scripts/text_benchmark.py` via `--max-bytes` and `--start-byte` plus `run_metadata.txt`.
+- Real-text check on equal 30k-byte slices:
+  - `grundgesetz.txt` (offset 0): diffusion BER is worse than MMSE at 0/6/12 dB.
+  - `text8.txt` (offset 1,000,000): diffusion BER is worse than MMSE at 0/6/12 dB.
+- Publishability note:
+  - `grundgesetz.txt`: official legal text, generally usable under UrhG §5 (amtliche Werke).
+  - `text8.txt`: derived from historical Wikipedia dump; redistribution should be treated as license/attribution-sensitive. Prefer publishing metrics/plots, not raw text blobs.
+
 Main result in one figure:
 
 - The plot compares `LS+MMSE`, `Diffusion+MMSE`, and `Perfect-CSI MMSE`.
