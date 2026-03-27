@@ -126,6 +126,17 @@ make paper-fair-ablation
   - `results/paper_long_run/summary_agg.csv`
   - `results/paper_long_run/manifest.json`
 
+<!-- PAPER_LONG_RUN_STATUS_START -->
+### Live Long-Run Status
+
+- Last update: `2026-03-27 16:06:59`
+- Runner active: `yes`
+- Checkpoint present: `yes`
+- Run dir: `results/paper_long_run`
+
+No benchmark summaries yet. Training or first benchmarks are still running.
+<!-- PAPER_LONG_RUN_STATUS_END -->
+
 Main result in one figure:
 
 - The plot compares `LS+MMSE`, `Diffusion+MMSE`, and `Perfect-CSI MMSE`.
