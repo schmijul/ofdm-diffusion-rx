@@ -8,6 +8,8 @@ from src.text_utils import (
     bytes_to_bits,
     byte_error_rate,
     char_mismatch_rate,
+    estimate_qam16_bit_priors_from_bytes,
+    estimate_qam16_bit_priors_from_text_files,
 )
 
 
@@ -35,3 +37,22 @@ def test_error_metrics_in_range():
     cer = char_mismatch_rate("abcdef", "abcxef")
     assert 0.0 < ber < 1.0
     assert 0.0 < cer < 1.0
+
+
+def test_estimate_qam16_bit_priors_from_bytes_shape():
+    p_global, p_pos = estimate_qam16_bit_priors_from_bytes(b"ABCD")
+    assert 0.0 < p_global < 1.0
+    assert len(p_pos) == 4
+    assert all(0.0 <= p <= 1.0 for p in p_pos)
+
+
+def test_estimate_qam16_bit_priors_from_text_files(tmp_path: Path):
+    a = tmp_path / "a.txt"
+    b = tmp_path / "b.txt"
+    a.write_text("AAAA", encoding="utf-8")
+    b.write_text("BBBB", encoding="utf-8")
+
+    p_global, p_pos, n_bytes = estimate_qam16_bit_priors_from_text_files([a, b])
+    assert n_bytes == 8
+    assert 0.0 < p_global < 1.0
+    assert len(p_pos) == 4

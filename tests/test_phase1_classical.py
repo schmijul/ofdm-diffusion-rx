@@ -178,3 +178,27 @@ def test_invalid_bit_probability_raises():
         assert False, "Expected ValueError for invalid modulation.bit_one_prob"
     except ValueError as e:
         assert "bit_one_prob" in str(e)
+
+
+def test_per_position_bit_source_respects_probabilities():
+    set_seed(17)
+    cfg = copy.deepcopy(load_config())
+    cfg["ofdm"]["n_ofdm_symbols"] = 24
+    cfg["modulation"]["bit_one_prob_per_position"] = [0.1, 0.3, 0.7, 0.9]
+
+    frame = simulate_received_frame(cfg, snr_db=8.0)
+    bits = frame["bits_tx"].reshape(-1, 4).float()
+    p_hat = bits.mean(dim=0)
+    target = torch.tensor([0.1, 0.3, 0.7, 0.9])
+    assert torch.max(torch.abs(p_hat - target)).item() < 0.08
+
+
+def test_invalid_per_position_bit_probability_raises():
+    cfg = copy.deepcopy(load_config())
+    cfg["modulation"]["bit_one_prob_per_position"] = [0.2, 0.8, 0.5]
+
+    try:
+        simulate_received_frame(cfg, snr_db=8.0)
+        assert False, "Expected ValueError for invalid modulation.bit_one_prob_per_position length"
+    except ValueError as e:
+        assert "bit_one_prob_per_position" in str(e)

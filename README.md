@@ -404,6 +404,7 @@ Convenient local commands:
 - `make smoke` for a tiny end-to-end train/evaluate/plot run
 - `make train`, `make evaluate`, `make plot` for default full workflow
 - `make benchmark` for multi-seed BER benchmarking with uncertainty stats
+- `make text-prior TEXTS=path1.txt,path2.txt` to estimate real-text `16-QAM` bit priors (`bit_one_prob` and per-bit-position priors)
 - `make text-benchmark TEXT=path/to/test.txt` for real text transmission benchmarking
 - `make regime-compare UNIFORM=... NONIID=...` for side-by-side prior-regime comparison plots
 - `make regime-study-smoke` for a tiny end-to-end validation of the regime-study pipeline
@@ -451,6 +452,9 @@ Implemented so far:
 - `scripts/prior_sweep.py` automates multi-prior experiments and generates a delta-vs-prior plot
 - `src/study_utils.py` centralizes prior parsing and benchmark-summary helpers for the new study layer
 - non-uniform bit-prior support via `modulation.bit_one_prob` (for non-IID experiments)
+- optional per-bit-position prior support via `modulation.bit_one_prob_per_position` (4 entries for 16-QAM bit positions)
+- `scripts/estimate_text_prior.py` for deriving priors from real `.txt` corpora and generating a ready-to-copy YAML snippet
+- `scripts/train.py --train-texts ...` can estimate and inject text priors automatically at train time
 - fast experiment configs for regime studies:
   - `config/exp_uniform_fast.yaml`
   - `config/exp_non_iid_fast.yaml`

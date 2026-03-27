@@ -7,7 +7,7 @@ BENCH_OUT := results/benchmark
 TEXT_OUT := results/text_benchmark
 PRIOR_GRID := 0.1,0.2,0.3,0.4,0.5
 
-.PHONY: help venv install doctor quick-test test smoke train evaluate plot benchmark text-benchmark text-train-real text-benchmark-real regime-compare regime-study-fast regime-study-fast-p8 regime-study-fast-p8-8seed regime-study-large regime-study-conference regime-study-smoke prior-sweep prior-sweep-large prior-sweep-smoke pilot-sweep frontend-compare summarize-regime clean
+.PHONY: help venv install doctor quick-test test smoke train evaluate plot benchmark text-prior text-benchmark text-train-real text-benchmark-real regime-compare regime-study-fast regime-study-fast-p8 regime-study-fast-p8-8seed regime-study-large regime-study-conference regime-study-smoke prior-sweep prior-sweep-large prior-sweep-smoke pilot-sweep frontend-compare summarize-regime clean
 
 help:
 	@echo "Targets:"
@@ -21,6 +21,7 @@ help:
 	@echo "  make evaluate    - evaluate with default config"
 	@echo "  make plot        - generate plots from default eval CSV"
 	@echo "  make benchmark   - multi-seed BER benchmark summary"
+	@echo "  make text-prior TEXTS=comma,separated,paths - estimate real-text bit priors for 16-QAM"
 	@echo "  make text-benchmark TEXT=path - run .txt transmission benchmark with leak guard"
 	@echo "  make text-train-real - train text-oriented checkpoint (bit_one_prob~0.462)"
 	@echo "  make text-benchmark-real TEXT=path - run text benchmark with real-text config/checkpoint"
@@ -75,6 +76,10 @@ plot:
 
 benchmark:
 	$(VENV_PY) scripts/benchmark.py --config config/default.yaml --checkpoint $(FULL_OUT)/best_model.pt --outdir $(BENCH_OUT) --n-frames 200 --seeds 11,22,33
+
+text-prior:
+	@test -n "$(TEXTS)" || (echo "Usage: make text-prior TEXTS=path1.txt,path2.txt [MAX_BYTES=n]" && exit 1)
+	$(VENV_PY) scripts/estimate_text_prior.py --texts "$(TEXTS)" $(if $(MAX_BYTES),--max-bytes-per-file $(MAX_BYTES))
 
 text-benchmark:
 	@test -n "$(TEXT)" || (echo "Usage: make text-benchmark TEXT=path/to/test.txt [TRAIN_TEXTS=comma,separated,paths]" && exit 1)

@@ -58,3 +58,38 @@ def char_mismatch_rate(ref_text: str, hyp_text: str) -> float:
         return 0.0
     # 1 - sequence similarity ratio is a stable approximation for text mismatch.
     return 1.0 - SequenceMatcher(a=ref_text, b=hyp_text).ratio()
+
+
+def estimate_qam16_bit_priors_from_bytes(data: bytes) -> tuple[float, list[float]]:
+    bits = bytes_to_bits(data)
+    n_symbols = bits.numel() // 4
+    if n_symbols == 0:
+        raise ValueError("Need at least one 16-QAM symbol worth of bits (4 bits)")
+    bits_4 = bits[: n_symbols * 4].reshape(n_symbols, 4).float()
+    global_p = float(bits_4.mean().item())
+    per_pos = [float(bits_4[:, i].mean().item()) for i in range(4)]
+    return global_p, per_pos
+
+
+def estimate_qam16_bit_priors_from_text_files(
+    text_paths: list[str | Path],
+    max_bytes_per_file: int = 0,
+) -> tuple[float, list[float], int]:
+    if not text_paths:
+        raise ValueError("text_paths must not be empty")
+    if max_bytes_per_file < 0:
+        raise ValueError("max_bytes_per_file must be non-negative")
+
+    blobs: list[bytes] = []
+    for path in text_paths:
+        raw = Path(path).read_bytes()
+        if max_bytes_per_file > 0:
+            raw = raw[:max_bytes_per_file]
+        if raw:
+            blobs.append(raw)
+    if not blobs:
+        raise ValueError("No bytes available from provided text files")
+
+    merged = b"".join(blobs)
+    global_p, per_pos = estimate_qam16_bit_priors_from_bytes(merged)
+    return global_p, per_pos, len(merged)

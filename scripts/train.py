@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import copy
 from pathlib import Path
 import sys
 
@@ -16,6 +17,7 @@ from src.dataset import EqualizedSymbolDataset, generate_symbol_dataset
 from src.diffusion.ddpm import DDPM
 from src.diffusion.model import ResidualMLPDenoiser
 from src.diffusion.noise_schedule import NoiseSchedule
+from src.text_utils import estimate_qam16_bit_priors_from_text_files
 from src.utils import get_device, load_config, set_seed
 
 
@@ -25,6 +27,8 @@ def parse_args():
     p.add_argument("--epochs", type=int, default=None)
     p.add_argument("--n-train", type=int, default=None)
     p.add_argument("--n-val", type=int, default=None)
+    p.add_argument("--train-texts", default="", help="Comma-separated train .txt paths for prior estimation")
+    p.add_argument("--max-bytes-per-text", type=int, default=0, help="Optional cap per text for prior estimation")
     p.add_argument("--outdir", default="results")
     return p.parse_args()
 
@@ -43,6 +47,21 @@ def evaluate_loss(ddpm: DDPM, loader: DataLoader, device: torch.device) -> float
 def main():
     args = parse_args()
     cfg = load_config(args.config)
+    if args.train_texts.strip():
+        text_paths = [p.strip() for p in args.train_texts.split(",") if p.strip()]
+        p_global, p_pos, n_bytes = estimate_qam16_bit_priors_from_text_files(
+            text_paths, max_bytes_per_file=args.max_bytes_per_text
+        )
+        cfg = copy.deepcopy(cfg)
+        cfg.setdefault("modulation", {})
+        cfg["modulation"]["bit_one_prob"] = p_global
+        cfg["modulation"]["bit_one_prob_per_position"] = p_pos
+        print(
+            "using text-estimated priors: "
+            f"files={len(text_paths)} bytes={n_bytes} "
+            f"bit_one_prob={p_global:.6f} "
+            f"bit_one_prob_per_position={[round(v, 6) for v in p_pos]}"
+        )
     set_seed(int(cfg["seed"]))
     device = get_device(cfg)
 

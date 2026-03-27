@@ -27,6 +27,25 @@ def _get_device(cfg: dict) -> torch.device:
     return torch.device("cuda" if use_cuda else "cpu")
 
 
+def _sample_tx_bits(cfg: dict, n_bits_frame: int, device: torch.device) -> torch.Tensor:
+    modulation_cfg = cfg.get("modulation", {})
+    per_pos = modulation_cfg.get("bit_one_prob_per_position", None)
+    if per_pos is not None:
+        probs = torch.tensor(per_pos, dtype=torch.float32, device=device).reshape(-1)
+        if probs.numel() != 4:
+            raise ValueError("modulation.bit_one_prob_per_position must have length 4 for 16-QAM")
+        if torch.any((probs <= 0.0) | (probs >= 1.0)):
+            raise ValueError("All modulation.bit_one_prob_per_position entries must be in (0,1)")
+        reps = (n_bits_frame + probs.numel() - 1) // probs.numel()
+        probs_vec = probs.repeat(reps)[:n_bits_frame]
+        return torch.bernoulli(probs_vec).long()
+
+    p1 = float(modulation_cfg.get("bit_one_prob", 0.5))
+    if p1 <= 0.0 or p1 >= 1.0:
+        raise ValueError("modulation.bit_one_prob must be in (0,1)")
+    return torch.bernoulli(torch.full((n_bits_frame,), p1, device=device)).long()
+
+
 def simulate_received_frame(cfg: dict, snr_db: float, bits_tx: torch.Tensor | None = None) -> dict:
     n_sc = cfg["ofdm"]["n_subcarriers"]
     cp = cfg["ofdm"]["cp_length"]
@@ -48,10 +67,7 @@ def simulate_received_frame(cfg: dict, snr_db: float, bits_tx: torch.Tensor | No
     snr_definition = str(receiver_cfg.get("snr_definition", "sample"))
 
     if bits_tx is None:
-        p1 = float(cfg.get("modulation", {}).get("bit_one_prob", 0.5))
-        if p1 <= 0.0 or p1 >= 1.0:
-            raise ValueError("modulation.bit_one_prob must be in (0,1)")
-        bits_tx = torch.bernoulli(torch.full((n_bits_frame,), p1, device=device)).long()
+        bits_tx = _sample_tx_bits(cfg, n_bits_frame=n_bits_frame, device=device)
     else:
         bits_tx = bits_tx.to(device).long().reshape(-1)
         if bits_tx.numel() != n_bits_frame:
