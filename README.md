@@ -129,12 +129,25 @@ make paper-fair-ablation
 <!-- PAPER_LONG_RUN_STATUS_START -->
 ### Live Long-Run Status
 
-- Last update: `2026-03-27 16:06:59`
-- Runner active: `yes`
+- Last update: `2026-03-29 17:42:51`
+- Runner active: `no`
 - Checkpoint present: `yes`
 - Run dir: `results/paper_long_run`
 
-No benchmark summaries yet. Training or first benchmarks are still running.
+Current aggregated results (`summary_agg.csv`):
+
+| corpus | weight | n_runs | mmse | mmse+prior | diff | diff-mmse+prior |
+|---|---:|---:|---:|---:|---:|---:|
+| grundgesetz | 0.25 | 5 | 0.3261 | 0.2470 | 0.2656 | +0.0186 |
+| grundgesetz | 0.35 | 5 | 0.3261 | 0.2443 | 0.2606 | +0.0163 |
+| grundgesetz | 0.45 | 5 | 0.3261 | 0.2455 | 0.2587 | +0.0132 |
+| text8 | 0.25 | 5 | 0.3267 | 0.2469 | 0.2653 | +0.0184 |
+| text8 | 0.35 | 5 | 0.3267 | 0.2436 | 0.2591 | +0.0155 |
+| text8 | 0.45 | 5 | 0.3267 | 0.2443 | 0.2571 | +0.0128 |
+
+Current best (lowest `diff - mmse+prior`): `text8`, `w=0.45`, `delta=+0.0128`
+
+- Completed run files in `summary.csv`: `30`
 <!-- PAPER_LONG_RUN_STATUS_END -->
 
 Main result in one figure:
