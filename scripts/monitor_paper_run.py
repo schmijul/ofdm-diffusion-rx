@@ -9,15 +9,14 @@ import time
 from pathlib import Path
 
 
-START_MARKER = "<!-- PAPER_LONG_RUN_STATUS_START -->"
-END_MARKER = "<!-- PAPER_LONG_RUN_STATUS_END -->"
-
-
 def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument("--run-dir", default="results/paper_long_run")
     p.add_argument("--readme", default="README.md")
     p.add_argument("--interval-sec", type=int, default=180)
+    p.add_argument("--process-pattern", default="scripts/paper_fair_ablation.py")
+    p.add_argument("--title", default="Live Long-Run Status")
+    p.add_argument("--marker-prefix", default="PAPER_LONG_RUN_STATUS")
     p.add_argument("--once", action="store_true")
     return p.parse_args()
 
@@ -52,16 +51,16 @@ def process_running(pattern: str) -> bool:
     return bool(out.stdout.strip())
 
 
-def build_status_block(run_dir: Path) -> str:
+def build_status_block(run_dir: Path, process_pattern: str, title: str, start_marker: str, end_marker: str) -> str:
     now = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     summary = read_summary(run_dir / "summary.csv")
     summary_agg = read_summary_agg(run_dir / "summary_agg.csv")
     train_ckpt = run_dir / "train" / "best_model.pt"
-    is_running = process_running("scripts/paper_fair_ablation.py")
+    is_running = process_running(process_pattern)
 
     lines: list[str] = []
-    lines.append(START_MARKER)
-    lines.append("### Live Long-Run Status")
+    lines.append(start_marker)
+    lines.append(f"### {title}")
     lines.append("")
     lines.append(f"- Last update: `{now}`")
     lines.append(f"- Runner active: `{'yes' if is_running else 'no'}`")
@@ -103,21 +102,21 @@ def build_status_block(run_dir: Path) -> str:
             lines.append("")
             lines.append(f"- Completed run files in `summary.csv`: `{len(summary)}`")
 
-    lines.append(END_MARKER)
+    lines.append(end_marker)
     return "\n".join(lines) + "\n"
 
 
-def update_readme(readme_path: Path, block: str) -> None:
+def update_readme(readme_path: Path, block: str, start_marker: str, end_marker: str, title: str) -> None:
     text = readme_path.read_text(encoding="utf-8")
-    if START_MARKER not in text or END_MARKER not in text:
+    if start_marker not in text or end_marker not in text:
         append = (
-            "\n\n## Long-Run Monitor\n\n"
+            f"\n\n## {title}\n\n"
             + block
         )
         readme_path.write_text(text + append, encoding="utf-8")
         return
-    start = text.index(START_MARKER)
-    end = text.index(END_MARKER) + len(END_MARKER)
+    start = text.index(start_marker)
+    end = text.index(end_marker) + len(end_marker)
     new_text = text[:start] + block.rstrip("\n") + text[end:]
     readme_path.write_text(new_text, encoding="utf-8")
 
@@ -126,9 +125,23 @@ def main():
     args = parse_args()
     run_dir = Path(args.run_dir)
     readme_path = Path(args.readme)
+    start_marker = f"<!-- {args.marker_prefix}_START -->"
+    end_marker = f"<!-- {args.marker_prefix}_END -->"
     while True:
-        block = build_status_block(run_dir)
-        update_readme(readme_path, block)
+        block = build_status_block(
+            run_dir,
+            process_pattern=args.process_pattern,
+            title=args.title,
+            start_marker=start_marker,
+            end_marker=end_marker,
+        )
+        update_readme(
+            readme_path,
+            block,
+            start_marker=start_marker,
+            end_marker=end_marker,
+            title=args.title,
+        )
         if args.once:
             break
         time.sleep(max(args.interval_sec, 30))

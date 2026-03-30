@@ -156,6 +156,17 @@ Current best (lowest `diff - mmse+prior`): `text8`, `w=0.45`, `delta=+0.0128`
 - Completed run files in `summary.csv`: `30`
 <!-- PAPER_LONG_RUN_STATUS_END -->
 
+<!-- PAPER_FOLLOWUP_STATUS_START -->
+### Live Follow-Up Status
+
+- Last update: `2026-03-30 13:45:38`
+- Runner active: `yes`
+- Checkpoint present: `yes`
+- Run dir: `results/paper_followup`
+
+No benchmark summaries yet. Training or first benchmarks are still running.
+<!-- PAPER_FOLLOWUP_STATUS_END -->
+
 Main result in one figure:
 
 - The plot compares `LS+MMSE`, `Diffusion+MMSE`, and `Perfect-CSI MMSE`.
