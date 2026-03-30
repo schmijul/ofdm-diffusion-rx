@@ -7,7 +7,7 @@ BENCH_OUT := results/benchmark
 TEXT_OUT := results/text_benchmark
 PRIOR_GRID := 0.1,0.2,0.3,0.4,0.5
 
-.PHONY: help venv install doctor quick-test test smoke train evaluate plot benchmark text-prior text-benchmark text-train-real text-benchmark-real paper-fair-ablation regime-compare regime-study-fast regime-study-fast-p8 regime-study-fast-p8-8seed regime-study-large regime-study-conference regime-study-smoke prior-sweep prior-sweep-large prior-sweep-smoke pilot-sweep frontend-compare summarize-regime clean
+.PHONY: help venv install doctor quick-test test smoke train evaluate plot benchmark text-prior text-benchmark text-train-real text-benchmark-real paper-fair-ablation paper-followup regime-compare regime-study-fast regime-study-fast-p8 regime-study-fast-p8-8seed regime-study-large regime-study-conference regime-study-smoke prior-sweep prior-sweep-large prior-sweep-smoke pilot-sweep frontend-compare summarize-regime clean
 
 help:
 	@echo "Targets:"
@@ -26,6 +26,7 @@ help:
 	@echo "  make text-train-real - train text-oriented checkpoint (bit_one_prob~0.462)"
 	@echo "  make text-benchmark-real TEXT=path - run text benchmark with real-text config/checkpoint"
 	@echo "  make paper-fair-ablation - long resumable training + fair text ablation sweep"
+	@echo "  make paper-followup - stronger focused follow-up run around the best fair setting"
 	@echo "  make regime-compare UNIFORM=csv NONIID=csv - compare diffusion gain across priors"
 	@echo "  make regime-study-fast  - train/benchmark uniform vs non-IID fast configs"
 	@echo "  make regime-study-fast-p8 - fast uniform vs non-IID study with 8 pilot subcarriers"
@@ -95,6 +96,9 @@ text-benchmark-real:
 
 paper-fair-ablation:
 	$(VENV_PY) scripts/paper_fair_ablation.py --config config/compare_text_real_long.yaml --outdir results/paper_long_run --train-texts data/grundgesetz.txt,data/text8.txt --max-bytes-per-text 2000000 --seeds 1,2,3,4,5 --diff-prior-weights 0.25,0.35,0.45 --max-bytes 20000 --grundgesetz-start-byte 0 --text8-start-byte 1000000
+
+paper-followup:
+	$(VENV_PY) scripts/paper_fair_ablation.py --config config/compare_text_real_followup.yaml --outdir results/paper_followup --train-texts data/grundgesetz.txt,data/text8.txt --max-bytes-per-text 2000000 --seeds 1,2,3 --diff-prior-weights 0.45,0.55,0.65 --max-bytes 20000 --grundgesetz-start-byte 0 --text8-start-byte 1000000
 
 regime-compare:
 	@test -n "$(UNIFORM)" || (echo "Usage: make regime-compare UNIFORM=.../benchmark_summary.csv NONIID=.../benchmark_summary.csv" && exit 1)

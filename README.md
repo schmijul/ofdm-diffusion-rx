@@ -120,6 +120,12 @@ Long-run paper ablation (resumable):
 make paper-fair-ablation
 ```
 
+- Focused follow-up shortcut (stronger model, longer training, weights around the current best region):
+
+```bash
+make paper-followup
+```
+
 - Outputs:
   - `results/paper_long_run/train/best_model.pt`
   - `results/paper_long_run/summary.csv`
