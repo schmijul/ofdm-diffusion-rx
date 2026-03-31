@@ -1,6 +1,6 @@
-VENV_PY := .venv/bin/python
-VENV_PIP := .venv/bin/pip
-PYTEST := .venv/bin/pytest
+VENV_PY ?= $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
+VENV_PIP ?= $(if $(wildcard .venv/bin/pip),.venv/bin/pip,pip)
+PYTEST ?= $(if $(wildcard .venv/bin/pytest),.venv/bin/pytest,pytest)
 SMOKE_OUT := results/smoke_make
 FULL_OUT := results/full
 BENCH_OUT := results/benchmark
