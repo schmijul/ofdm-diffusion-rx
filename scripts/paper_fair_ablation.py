@@ -57,11 +57,14 @@ def read_mean_ber(csv_path: Path) -> tuple[float, float, float]:
 
 def maybe_train(args, outdir: Path) -> Path:
     ckpt = outdir / "train" / "best_model.pt"
+    train_log = outdir / "train" / "train_log.csv"
+    curves = outdir / "train" / "training_curves.png"
+    train_complete = ckpt.exists() and train_log.exists() and curves.exists()
     if args.skip_train:
         if not ckpt.exists():
             raise FileNotFoundError(f"--skip-train set but checkpoint missing: {ckpt}")
         return ckpt
-    if ckpt.exists() and not args.force_train:
+    if train_complete and not args.force_train:
         return ckpt
     (outdir / "train").mkdir(parents=True, exist_ok=True)
     run(
