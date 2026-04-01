@@ -11,12 +11,12 @@ from pathlib import Path
 
 def parse_args():
     p = argparse.ArgumentParser()
-    p.add_argument("--run-dir", default="results/paper_long_run")
+    p.add_argument("--run-dir", default="results/fair_long_run")
     p.add_argument("--readme", default="README.md")
     p.add_argument("--interval-sec", type=int, default=180)
-    p.add_argument("--process-pattern", default="scripts/paper_fair_ablation.py")
+    p.add_argument("--process-pattern", default="scripts/fair_ablation.py")
     p.add_argument("--title", default="Live Long-Run Status")
-    p.add_argument("--marker-prefix", default="PAPER_LONG_RUN_STATUS")
+    p.add_argument("--marker-prefix", default="FAIR_LONG_RUN_STATUS")
     p.add_argument("--once", action="store_true")
     return p.parse_args()
 

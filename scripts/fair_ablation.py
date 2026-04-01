@@ -14,7 +14,7 @@ if str(ROOT) not in sys.path:
 def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument("--config", default="config/compare_text_real_long.yaml")
-    p.add_argument("--outdir", default="results/paper_long_run")
+    p.add_argument("--outdir", default="results/fair_long_run")
     p.add_argument("--train-texts", default="data/grundgesetz.txt,data/text8.txt")
     p.add_argument("--max-bytes-per-text", type=int, default=2000000)
     p.add_argument("--force-train", action="store_true")

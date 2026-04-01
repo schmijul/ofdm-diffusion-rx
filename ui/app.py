@@ -305,7 +305,7 @@ def snr_point_count(cfg: dict[str, Any]) -> int:
     return int(round((end - start) / step)) + 1
 
 
-def paper_expected_total(seeds_text: str, weights_text: str) -> int:
+def fair_expected_total(seeds_text: str, weights_text: str) -> int:
     seeds = parse_csv_list(seeds_text, int)
     weights = parse_csv_list(weights_text, float)
     return max(len(seeds) * len(weights) * 2, 0)
@@ -331,7 +331,7 @@ def register_run(entry: dict[str, Any]) -> None:
     save_registry(entries)
 
 
-def launch_paper_run(
+def launch_fair_run(
     *,
     config_path: str,
     outdir: str,
@@ -348,7 +348,7 @@ def launch_paper_run(
     run_dir.mkdir(parents=True, exist_ok=True)
     cmd = [
         sys.executable,
-        str(ROOT / "scripts" / "paper_fair_ablation.py"),
+        str(ROOT / "scripts" / "fair_ablation.py"),
         "--config",
         config_path,
         "--outdir",
@@ -373,16 +373,16 @@ def launch_paper_run(
 
     pid = launch_detached(cmd, run_dir / "ui_launch.log")
     entry = {
-        "id": f"paper-{now_stamp()}",
-        "kind": "paper_fair_ablation",
-        "title": "Paper fair ablation",
+        "id": f"fair-{now_stamp()}",
+        "kind": "fair_ablation",
+        "title": "Fair ablation",
         "config_path": config_path,
         "outdir": outdir,
         "log_path": short_path(run_dir / "ui_launch.log"),
         "command": cmd,
         "pid": pid,
         "launched_at": now_human(),
-        "expected_total": paper_expected_total(seeds_text, weights_text),
+        "expected_total": fair_expected_total(seeds_text, weights_text),
         "params": {
             "train_texts": train_texts,
             "max_bytes_per_text": max_bytes_per_text,
@@ -524,7 +524,7 @@ def show_metric_cards(items: list[tuple[str, str]]) -> None:
             )
 
 
-def plot_paper_summary(summary_agg: list[dict[str, str]]):
+def plot_fair_summary(summary_agg: list[dict[str, str]]):
     grouped: dict[str, list[tuple[float, float]]] = defaultdict(list)
     for row in summary_agg:
         corpus = row.get("corpus", "unknown")
@@ -546,7 +546,7 @@ def plot_paper_summary(summary_agg: list[dict[str, str]]):
     ax.axhline(0.0, color="#334155", linestyle="--", linewidth=1)
     ax.set_xlabel("prior weight")
     ax.set_ylabel("diff - mmse+prior BER")
-    ax.set_title("Paper fair ablation gap")
+    ax.set_title("Fair ablation gap")
     ax.grid(True, alpha=0.25)
     ax.legend(frameon=False)
     fig.tight_layout()
@@ -585,7 +585,7 @@ def render_run_summary(run_dir: Path) -> None:
     if summary_agg_path.exists():
         rows = csv_rows(summary_agg_path)
         st.markdown('<div class="ui-card ui-card-strong">', unsafe_allow_html=True)
-        st.markdown('<div class="ui-section-title">Paper summary</div>', unsafe_allow_html=True)
+        st.markdown('<div class="ui-section-title">Fair summary</div>', unsafe_allow_html=True)
         show_metric_cards(
             [
                 ("Aggregated rows", str(len(rows))),
@@ -594,7 +594,7 @@ def render_run_summary(run_dir: Path) -> None:
             ]
         )
         st.markdown(html_table(rows, ["corpus", "prior_weight", "n_runs", "mean_mmse_ber", "mean_mmse_prior_ber", "mean_diff_ber", "mean_delta_diff_minus_mmse_prior"], max_rows=50), unsafe_allow_html=True)
-        st.pyplot(plot_paper_summary(rows), clear_figure=True)
+        st.pyplot(plot_fair_summary(rows), clear_figure=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
     if text_metrics_path.exists():
@@ -681,10 +681,10 @@ def main() -> None:
 
         with col_left:
             st.markdown('<div class="ui-card ui-card-strong">', unsafe_allow_html=True)
-            st.markdown('<div class="ui-section-title">Paper fair ablation</div>', unsafe_allow_html=True)
-            with st.form("launch_paper_form", clear_on_submit=False):
+            st.markdown('<div class="ui-section-title">Fair ablation</div>', unsafe_allow_html=True)
+            with st.form("launch_fair_form", clear_on_submit=False):
                 config_path = st.text_input("Config", value="config/compare_text_real_followup_adapt.yaml")
-                outdir = st.text_input("Output dir", value=f"results/ui/paper_{now_stamp()}")
+                outdir = st.text_input("Output dir", value=f"results/ui/fair_{now_stamp()}")
                 train_texts = st.text_input("Train texts", value="data/grundgesetz.txt,data/text8.txt")
                 max_bytes_per_text = st.number_input("Max bytes per train text", min_value=1, value=2_000_000, step=100_000)
                 seeds_text = st.text_input("Seeds", value="1,2,3")
@@ -693,9 +693,9 @@ def main() -> None:
                 grundgesetz_start_byte = st.number_input("Grundgesetz start byte", min_value=0, value=0, step=1_000)
                 text8_start_byte = st.number_input("text8 start byte", min_value=0, value=1_000_000, step=1_000)
                 force_train = st.checkbox("Force retrain", value=False)
-                submitted = st.form_submit_button("Launch paper fair ablation")
+                submitted = st.form_submit_button("Launch fair ablation")
             if submitted:
-                entry = launch_paper_run(
+                entry = launch_fair_run(
                     config_path=config_path,
                     outdir=outdir,
                     train_texts=train_texts,
@@ -707,7 +707,7 @@ def main() -> None:
                     text8_start_byte=int(text8_start_byte),
                     force_train=force_train,
                 )
-                st.success(f"Launched PID {entry['pid']} for paper fair ablation")
+                st.success(f"Launched PID {entry['pid']} for fair ablation")
                 st.code(" ".join(entry["command"]), language="bash")
             st.markdown("</div>", unsafe_allow_html=True)
 
@@ -717,7 +717,7 @@ def main() -> None:
             with st.form("launch_text_form", clear_on_submit=False):
                 text_path = st.text_input("Test text", value="data/grundgesetz.txt")
                 config_path = st.text_input("Config ", value="config/compare_text_real_followup_adapt.yaml", key="text_config")
-                checkpoint = st.text_input("Checkpoint", value="results/paper_followup_adapt/train/best_model.pt")
+                checkpoint = st.text_input("Checkpoint", value="results/fair_followup_adapt/train/best_model.pt")
                 outdir = st.text_input("Output dir ", value=f"results/ui/text_{now_stamp()}", key="text_outdir")
                 train_texts = st.text_input("Train texts ", value="data/grundgesetz.txt,data/text8.txt", key="text_train_texts")
                 seed = st.number_input("Seed", min_value=0, value=1, step=1)
@@ -757,7 +757,7 @@ def main() -> None:
                 expected = int(entry.get("expected_total") or 0)
                 completed = 0
                 if run_dir.exists():
-                    if entry.get("kind") == "paper_fair_ablation":
+                    if entry.get("kind") == "fair_ablation":
                         completed = len(list((run_dir / "bench").rglob("text_metrics.csv"))) if (run_dir / "bench").exists() else 0
                     elif entry.get("kind") == "text_benchmark":
                         completed = 1 if (run_dir / "text_metrics.csv").exists() else 0

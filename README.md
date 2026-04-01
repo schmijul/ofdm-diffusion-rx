@@ -90,10 +90,20 @@ Local UI:
 - Launch: `make ui`
 - Alternate launch: `.venv/bin/streamlit run ui/app.py`
 - The app has three tabs:
-  - `Launch` for `paper_fair_ablation.py` and `text_benchmark.py`
+  - `Launch` for `fair_ablation.py` and `text_benchmark.py`
   - `Live` for process status, log tails, and completion counts
   - `Results` for tables, plots, and generated artifacts
 - Runtime registry: `results/ui/runs.json`
+
+UI walkthrough with screenshots:
+
+- **Overview**: top-level status cards, run history, and recent summaries.
+
+![UI Overview](imgs/ui/ui_overview.png)
+
+- **Launch panel**: form-based run setup for fair ablation and text benchmark jobs.
+
+![UI Launch Panel](imgs/ui/ui_launch_panel.png)
 
 Limitations:
 
@@ -101,7 +111,7 @@ Limitations:
 - It launches the existing CLI scripts in the background and reads their outputs.
 - It does not replace the CLI workflows; it just makes them easier to use.
 
-Paper-fair ablation update (additional controls):
+Fair-ablation update (additional controls):
 
 - We added a fair control in `scripts/text_benchmark.py`: `--mmse-prior-weight`.
 - This enables direct comparison of:
@@ -119,42 +129,42 @@ Paper-fair ablation update (additional controls):
   - Fair: `0.3296` (MMSE), `0.2452` (MMSE+prior), `0.2560` (Diffusion+prior)
   - No-prior: `0.3296` (MMSE), `0.3361` (Diffusion)
 
-Interpretation for paper framing:
+Interpretation for publication framing:
 
 - Real-text BER gains in the current setup are primarily explained by prior-aware demapping.
 - Diffusion still helps relative to plain MMSE, but does not beat the fair MMSE+prior control yet.
 
-Long-run paper ablation (resumable):
+Long-run fair ablation (resumable):
 
-- Use `scripts/paper_fair_ablation.py` for multi-hour, resumable runs that combine:
+- Use `scripts/fair_ablation.py` for multi-hour, resumable runs that combine:
   - stronger text-oriented training (`config/compare_text_real_long.yaml`)
   - fair ablation sweep over prior weights and seeds
   - per-run and aggregated CSV summaries
 - One-command shortcut:
 
 ```bash
-make paper-fair-ablation
+make fair-ablation-long
 ```
 
 - Focused follow-up shortcut (stronger model, longer training, weights around the current best region):
 
 ```bash
-make paper-followup
+make fair-ablation-followup
 ```
 
 - Outputs:
-  - `results/paper_long_run/train/best_model.pt`
-  - `results/paper_long_run/summary.csv`
-  - `results/paper_long_run/summary_agg.csv`
-  - `results/paper_long_run/manifest.json`
+  - `results/fair_long_run/train/best_model.pt`
+  - `results/fair_long_run/summary.csv`
+  - `results/fair_long_run/summary_agg.csv`
+  - `results/fair_long_run/manifest.json`
 
-<!-- PAPER_LONG_RUN_STATUS_START -->
+<!-- FAIR_LONG_RUN_STATUS_START -->
 ### Live Long-Run Status
 
 - Last update: `2026-03-29 17:42:51`
 - Runner active: `no`
 - Checkpoint present: `yes`
-- Run dir: `results/paper_long_run`
+- Run dir: `results/fair_long_run`
 
 Current aggregated results (`summary_agg.csv`):
 
@@ -170,15 +180,15 @@ Current aggregated results (`summary_agg.csv`):
 Current best (lowest `diff - mmse+prior`): `text8`, `w=0.45`, `delta=+0.0128`
 
 - Completed run files in `summary.csv`: `30`
-<!-- PAPER_LONG_RUN_STATUS_END -->
+<!-- FAIR_LONG_RUN_STATUS_END -->
 
-<!-- PAPER_FOLLOWUP_STATUS_START -->
+<!-- FAIR_FOLLOWUP_STATUS_START -->
 ### Live Follow-Up Status
 
 - Last update: `2026-04-01 17:25:01`
 - Runner active: `no`
 - Checkpoint present: `yes`
-- Run dir: `results/paper_followup`
+- Run dir: `results/fair_followup`
 
 Current aggregated results (`summary_agg.csv`):
 
@@ -194,7 +204,7 @@ Current aggregated results (`summary_agg.csv`):
 Current best (lowest `diff - mmse+prior`): `text8`, `w=0.65`, `delta=+0.0171`
 
 - Completed run files in `summary.csv`: `18`
-<!-- PAPER_FOLLOWUP_STATUS_END -->
+<!-- FAIR_FOLLOWUP_STATUS_END -->
 
 Main result in one figure:
 
@@ -821,16 +831,16 @@ Community note:
 
 ## Live Adapt Status
 
-<!-- PAPER_ADAPT_STATUS_START -->
+<!-- FAIR_ADAPT_STATUS_START -->
 ### Live Adapt Status
 
 - Last update: `2026-04-01 17:26:45`
 - Runner active: `yes`
 - Checkpoint present: `no`
-- Run dir: `results/paper_followup_adapt`
+- Run dir: `results/fair_followup_adapt`
 
 No benchmark summaries yet. Training or first benchmarks are still running.
-<!-- PAPER_ADAPT_STATUS_END -->
+<!-- FAIR_ADAPT_STATUS_END -->
 
 ## Model Explore Branch Notes
 
@@ -838,7 +848,7 @@ Branch: `model-explore-branch`
 
 Smoke setup:
 
-- `paper_fair_ablation.py`
+- `fair_ablation.py`
 - one seed, `diff_prior_weight=0.65`
 - 4k-byte text benchmark slices
 - train budget: 2 epochs, 2048 train samples, 512 val samples
