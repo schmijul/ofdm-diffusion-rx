@@ -14,7 +14,7 @@ import torch
 from src.classical_receiver import run_receiver_on_frame, simulate_received_frame
 from src.demapper import qam16_to_bits
 from src.diffusion.ddpm import DDPM
-from src.diffusion.model import ResidualMLPDenoiser
+from src.diffusion.model import build_denoiser_from_config, build_prior_context_from_config
 from src.diffusion.noise_schedule import NoiseSchedule
 from src.metrics import bit_error_rate
 from src.text_utils import (
@@ -112,31 +112,12 @@ def bits_per_frame(cfg: dict) -> int:
     n_sym = int(cfg["ofdm"]["n_ofdm_symbols"])
     n_data = (n_sc - n_p) * n_sym
     return n_data * 4
-
-
-def build_prior_context(cfg: dict, device: torch.device) -> torch.Tensor | None:
-    modulation_cfg = cfg.get("modulation", {})
-    per_pos = modulation_cfg.get("bit_one_prob_per_position", None)
-    if isinstance(per_pos, list) and len(per_pos) == 4:
-        return torch.tensor(per_pos, device=device, dtype=torch.float32)
-    p = modulation_cfg.get("bit_one_prob", None)
-    if p is None:
-        return None
-    return torch.full((4,), float(p), device=device, dtype=torch.float32)
-
-
 def load_diffusion(cfg: dict, checkpoint: Path, device: torch.device):
     if not checkpoint.exists():
         return None
 
     model_cfg = cfg["diffusion"]["model"]
-    model = ResidualMLPDenoiser(
-        input_dim=2,
-        hidden_dim=int(model_cfg["hidden_dim"]),
-        n_res_blocks=int(model_cfg["n_res_blocks"]),
-        time_dim=int(model_cfg["time_embedding_dim"]),
-        context_dim=int(model_cfg.get("context_dim", 0)),
-    ).to(device)
+    model = build_denoiser_from_config(model_cfg).to(device)
 
     ckpt = torch.load(checkpoint, map_location=device)
     model.load_state_dict(ckpt["model_state_dict"])
@@ -153,7 +134,7 @@ def load_diffusion(cfg: dict, checkpoint: Path, device: torch.device):
         schedule,
         device,
         inference_steps=int(cfg["diffusion"]["inference_steps"]),
-        prior_context=build_prior_context(cfg, device),
+        prior_context=build_prior_context_from_config(cfg, device),
     )
 
 

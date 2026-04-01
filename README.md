@@ -831,3 +831,27 @@ Community note:
 
 No benchmark summaries yet. Training or first benchmarks are still running.
 <!-- PAPER_ADAPT_STATUS_END -->
+
+## Model Explore Branch Notes
+
+Branch: `model-explore-branch`
+
+Smoke setup:
+
+- `paper_fair_ablation.py`
+- one seed, `diff_prior_weight=0.65`
+- 4k-byte text benchmark slices
+- train budget: 2 epochs, 2048 train samples, 512 val samples
+
+Aggregate gap vs `mmse+prior` on smoke runs:
+
+| variant | grundgesetz | text8 |
+|---|---:|---:|
+| residual_mlp | +0.0113 | +0.0129 |
+| film_residual_mlp | +0.0136 | +0.0147 |
+| gated_residual_mlp | +0.0149 | +0.0140 |
+
+Result:
+
+- None of the architectural variants beat `mmse+prior` in this smoke setting.
+- `residual_mlp` stayed the best of the three, so the new variants are not a clear next step for the full run.

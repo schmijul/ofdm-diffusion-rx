@@ -15,7 +15,7 @@ from tqdm import tqdm
 
 from src.dataset import EqualizedSymbolDataset, generate_symbol_dataset
 from src.diffusion.ddpm import DDPM
-from src.diffusion.model import ResidualMLPDenoiser
+from src.diffusion.model import build_denoiser_from_config, build_prior_context_from_config
 from src.diffusion.noise_schedule import NoiseSchedule
 from src.text_utils import estimate_qam16_bit_priors_from_text_files
 from src.utils import get_device, load_config, set_seed
@@ -42,20 +42,6 @@ def evaluate_loss(ddpm: DDPM, loader: DataLoader, device: torch.device) -> float
             snr_db = snr_db.to(device)
             losses.append(ddpm.p_losses(x_clean, snr_db).item())
     return float(sum(losses) / max(len(losses), 1))
-
-
-def build_prior_context(cfg: dict, device: torch.device) -> torch.Tensor | None:
-    modulation_cfg = cfg.get("modulation", {})
-    per_pos = modulation_cfg.get("bit_one_prob_per_position", None)
-    if isinstance(per_pos, list) and len(per_pos) == 4:
-        return torch.tensor(per_pos, device=device, dtype=torch.float32)
-    p = modulation_cfg.get("bit_one_prob", None)
-    if p is None:
-        return None
-    p = float(p)
-    return torch.full((4,), p, device=device, dtype=torch.float32)
-
-
 def main():
     args = parse_args()
     cfg = load_config(args.config)
@@ -94,13 +80,7 @@ def main():
     val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False)
 
     model_cfg = cfg["diffusion"]["model"]
-    model = ResidualMLPDenoiser(
-        input_dim=2,
-        hidden_dim=int(model_cfg["hidden_dim"]),
-        n_res_blocks=int(model_cfg["n_res_blocks"]),
-        time_dim=int(model_cfg["time_embedding_dim"]),
-        context_dim=int(model_cfg.get("context_dim", 0)),
-    ).to(device)
+    model = build_denoiser_from_config(model_cfg).to(device)
 
     schedule = NoiseSchedule(
         n_timesteps=int(cfg["diffusion"]["n_timesteps"]),
@@ -108,7 +88,7 @@ def main():
         beta_end=float(cfg["diffusion"]["beta_end"]),
         schedule=str(cfg["diffusion"]["schedule"]),
     )
-    prior_context = build_prior_context(cfg, device)
+    prior_context = build_prior_context_from_config(cfg, device)
     ddpm = DDPM(
         model,
         schedule,
