@@ -44,6 +44,18 @@ def evaluate_loss(ddpm: DDPM, loader: DataLoader, device: torch.device) -> float
     return float(sum(losses) / max(len(losses), 1))
 
 
+def build_prior_context(cfg: dict, device: torch.device) -> torch.Tensor | None:
+    modulation_cfg = cfg.get("modulation", {})
+    per_pos = modulation_cfg.get("bit_one_prob_per_position", None)
+    if isinstance(per_pos, list) and len(per_pos) == 4:
+        return torch.tensor(per_pos, device=device, dtype=torch.float32)
+    p = modulation_cfg.get("bit_one_prob", None)
+    if p is None:
+        return None
+    p = float(p)
+    return torch.full((4,), p, device=device, dtype=torch.float32)
+
+
 def main():
     args = parse_args()
     cfg = load_config(args.config)
@@ -87,6 +99,7 @@ def main():
         hidden_dim=int(model_cfg["hidden_dim"]),
         n_res_blocks=int(model_cfg["n_res_blocks"]),
         time_dim=int(model_cfg["time_embedding_dim"]),
+        context_dim=int(model_cfg.get("context_dim", 0)),
     ).to(device)
 
     schedule = NoiseSchedule(
@@ -95,7 +108,15 @@ def main():
         beta_end=float(cfg["diffusion"]["beta_end"]),
         schedule=str(cfg["diffusion"]["schedule"]),
     )
-    ddpm = DDPM(model, schedule, device)
+    prior_context = build_prior_context(cfg, device)
+    ddpm = DDPM(
+        model,
+        schedule,
+        device,
+        prior_context=prior_context,
+        bit_loss_weight=float(cfg.get("training", {}).get("bit_loss_weight", 0.0)),
+        bit_logit_temperature=float(cfg.get("training", {}).get("bit_logit_temperature", 24.0)),
+    )
 
     optimizer = torch.optim.Adam(model.parameters(), lr=float(cfg["training"]["lr"]))
 

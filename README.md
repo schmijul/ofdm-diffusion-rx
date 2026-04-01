@@ -159,12 +159,25 @@ Current best (lowest `diff - mmse+prior`): `text8`, `w=0.45`, `delta=+0.0128`
 <!-- PAPER_FOLLOWUP_STATUS_START -->
 ### Live Follow-Up Status
 
-- Last update: `2026-03-30 13:45:38`
-- Runner active: `yes`
+- Last update: `2026-04-01 17:25:01`
+- Runner active: `no`
 - Checkpoint present: `yes`
 - Run dir: `results/paper_followup`
 
-No benchmark summaries yet. Training or first benchmarks are still running.
+Current aggregated results (`summary_agg.csv`):
+
+| corpus | weight | n_runs | mmse | mmse+prior | diff | diff-mmse+prior |
+|---|---:|---:|---:|---:|---:|---:|
+| grundgesetz | 0.45 | 3 | 0.3261 | 0.2454 | 0.2679 | +0.0225 |
+| grundgesetz | 0.55 | 3 | 0.3261 | 0.2476 | 0.2669 | +0.0193 |
+| grundgesetz | 0.65 | 3 | 0.3261 | 0.2501 | 0.2674 | +0.0172 |
+| text8 | 0.45 | 3 | 0.3274 | 0.2450 | 0.2659 | +0.0209 |
+| text8 | 0.55 | 3 | 0.3274 | 0.2472 | 0.2653 | +0.0181 |
+| text8 | 0.65 | 3 | 0.3274 | 0.2500 | 0.2671 | +0.0171 |
+
+Current best (lowest `diff - mmse+prior`): `text8`, `w=0.65`, `delta=+0.0171`
+
+- Completed run files in `summary.csv`: `18`
 <!-- PAPER_FOLLOWUP_STATUS_END -->
 
 Main result in one figure:
@@ -788,3 +801,17 @@ Community note:
 - DDPM literature for diffusion training and reverse sampling
 
 (Exact citation details can be expanded once the final report or blog-post-ready version is prepared.)
+
+
+## Live Adapt Status
+
+<!-- PAPER_ADAPT_STATUS_START -->
+### Live Adapt Status
+
+- Last update: `2026-04-01 17:26:01`
+- Runner active: `yes`
+- Checkpoint present: `no`
+- Run dir: `results/paper_followup_adapt`
+
+No benchmark summaries yet. Training or first benchmarks are still running.
+<!-- PAPER_ADAPT_STATUS_END -->

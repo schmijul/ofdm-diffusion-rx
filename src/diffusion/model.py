@@ -45,12 +45,25 @@ class ResBlock(nn.Module):
 
 
 class ResidualMLPDenoiser(nn.Module):
-    def __init__(self, input_dim: int = 2, hidden_dim: int = 256, n_res_blocks: int = 6, time_dim: int = 128):
+    def __init__(
+        self,
+        input_dim: int = 2,
+        hidden_dim: int = 256,
+        n_res_blocks: int = 6,
+        time_dim: int = 128,
+        context_dim: int = 0,
+    ):
         super().__init__()
         self.time_dim = time_dim
+        self.context_dim = int(context_dim)
 
         self.input_proj = nn.Linear(input_dim, hidden_dim)
         self.time_proj = nn.Sequential(nn.Linear(time_dim, hidden_dim), nn.SiLU(), nn.Linear(hidden_dim, hidden_dim))
+        self.context_proj = (
+            nn.Sequential(nn.Linear(self.context_dim, hidden_dim), nn.SiLU(), nn.Linear(hidden_dim, hidden_dim))
+            if self.context_dim > 0
+            else None
+        )
 
         self.snr_to_gamma = nn.Sequential(nn.Linear(1, hidden_dim), nn.SiLU(), nn.Linear(hidden_dim, hidden_dim))
         self.snr_to_beta = nn.Sequential(nn.Linear(1, hidden_dim), nn.SiLU(), nn.Linear(hidden_dim, hidden_dim))
@@ -58,7 +71,9 @@ class ResidualMLPDenoiser(nn.Module):
         self.blocks = nn.ModuleList([ResBlock(hidden_dim) for _ in range(n_res_blocks)])
         self.out = nn.Sequential(nn.SiLU(), nn.Linear(hidden_dim, input_dim))
 
-    def forward(self, x: torch.Tensor, t: torch.Tensor, snr_db: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, x: torch.Tensor, t: torch.Tensor, snr_db: torch.Tensor, context: torch.Tensor | None = None
+    ) -> torch.Tensor:
         h = self.input_proj(x)
         if t.numel() > 1 and torch.all(t == t[0]):
             # Benchmark inference repeatedly uses a single timestep per batch.
@@ -67,6 +82,10 @@ class ResidualMLPDenoiser(nn.Module):
         else:
             t_emb = sinusoidal_time_embedding(t, self.time_dim)
         h = h + self.time_proj(t_emb)
+        if self.context_proj is not None:
+            if context is None:
+                context = torch.zeros((x.shape[0], self.context_dim), device=x.device, dtype=x.dtype)
+            h = h + self.context_proj(context)
 
         gamma = self.snr_to_gamma(snr_db)
         beta = self.snr_to_beta(snr_db)

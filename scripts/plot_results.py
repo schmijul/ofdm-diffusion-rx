@@ -96,6 +96,7 @@ def load_diffusion(cfg: dict, checkpoint: Path):
         hidden_dim=int(model_cfg["hidden_dim"]),
         n_res_blocks=int(model_cfg["n_res_blocks"]),
         time_dim=int(model_cfg["time_embedding_dim"]),
+        context_dim=int(model_cfg.get("context_dim", 0)),
     ).to(device)
     ckpt = torch.load(checkpoint, map_location=device)
     model.load_state_dict(ckpt["model_state_dict"])
@@ -107,7 +108,20 @@ def load_diffusion(cfg: dict, checkpoint: Path):
         beta_end=float(cfg["diffusion"]["beta_end"]),
         schedule=str(cfg["diffusion"]["schedule"]),
     )
-    return DDPM(model, schedule, device, inference_steps=int(cfg["diffusion"]["inference_steps"]))
+    modulation_cfg = cfg.get("modulation", {})
+    per_pos = modulation_cfg.get("bit_one_prob_per_position", None)
+    prior_context = None
+    if isinstance(per_pos, list) and len(per_pos) == 4:
+        prior_context = torch.tensor(per_pos, device=device, dtype=torch.float32)
+    elif "bit_one_prob" in modulation_cfg:
+        prior_context = torch.full((4,), float(modulation_cfg["bit_one_prob"]), device=device, dtype=torch.float32)
+    return DDPM(
+        model,
+        schedule,
+        device,
+        inference_steps=int(cfg["diffusion"]["inference_steps"]),
+        prior_context=prior_context,
+    )
 
 
 def plot_constellations(cfg: dict, outdir: Path, ddpm: DDPM | None):
