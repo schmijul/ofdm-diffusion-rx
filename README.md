@@ -85,6 +85,22 @@ Real-text winner reproduction:
   --diff-prior-weight 0.35
 ```
 
+Local UI:
+
+- Launch: `make ui`
+- Alternate launch: `.venv/bin/streamlit run ui/app.py`
+- The app has three tabs:
+  - `Launch` for `paper_fair_ablation.py` and `text_benchmark.py`
+  - `Live` for process status, log tails, and completion counts
+  - `Results` for tables, plots, and generated artifacts
+- Runtime registry: `results/ui/runs.json`
+
+Limitations:
+
+- This is a local convenience layer, not a multi-user service.
+- It launches the existing CLI scripts in the background and reads their outputs.
+- It does not replace the CLI workflows; it just makes them easier to use.
+
 Paper-fair ablation update (additional controls):
 
 - We added a fair control in `scripts/text_benchmark.py`: `--mmse-prior-weight`.
