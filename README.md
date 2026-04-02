@@ -129,7 +129,7 @@ Fair-ablation update (additional controls):
   - Fair: `0.3296` (MMSE), `0.2452` (MMSE+prior), `0.2560` (Diffusion+prior)
   - No-prior: `0.3296` (MMSE), `0.3361` (Diffusion)
 
-Interpretation for publication framing:
+Interpretation of the current result:
 
 - Real-text BER gains in the current setup are primarily explained by prior-aware demapping.
 - Diffusion still helps relative to plain MMSE, but does not beat the fair MMSE+prior control yet.
@@ -161,8 +161,8 @@ make fair-ablation-followup
 <!-- FAIR_LONG_RUN_STATUS_START -->
 ### Live Long-Run Status
 
-- Last update: `2026-03-29 17:42:51`
-- Runner active: `no`
+- Last update: `2026-04-02 08:49:48`
+- Runner active: `yes`
 - Checkpoint present: `yes`
 - Run dir: `results/fair_long_run`
 
@@ -185,8 +185,8 @@ Current best (lowest `diff - mmse+prior`): `text8`, `w=0.45`, `delta=+0.0128`
 <!-- FAIR_FOLLOWUP_STATUS_START -->
 ### Live Follow-Up Status
 
-- Last update: `2026-04-01 17:25:01`
-- Runner active: `no`
+- Last update: `2026-04-02 08:49:48`
+- Runner active: `yes`
 - Checkpoint present: `yes`
 - Run dir: `results/fair_followup`
 
@@ -826,7 +826,7 @@ Community note:
 - Standard OFDM references for CP-OFDM and pilot-aided channel estimation
 - DDPM literature for diffusion training and reverse sampling
 
-(Exact citation details can be expanded once the final report or blog-post-ready version is prepared.)
+(Exact citation details can be expanded later if a formal write-up is needed.)
 
 
 ## Live Adapt Status
@@ -834,9 +834,9 @@ Community note:
 <!-- FAIR_ADAPT_STATUS_START -->
 ### Live Adapt Status
 
-- Last update: `2026-04-01 17:26:45`
+- Last update: `2026-04-02 08:48:55`
 - Runner active: `yes`
-- Checkpoint present: `no`
+- Checkpoint present: `yes`
 - Run dir: `results/fair_followup_adapt`
 
 No benchmark summaries yet. Training or first benchmarks are still running.
