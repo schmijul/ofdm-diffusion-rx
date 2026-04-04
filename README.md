@@ -905,3 +905,10 @@ Current best (lowest `diff - mmse+prior`): `grundgesetz`, `w=0.65`, `delta=+0.01
 
 - Completed run files in `summary.csv`: `18`
 <!-- FAIR_ADAPT_TUNE_A_STATUS_END -->
+
+## Current Takeaway
+
+- On the current real-text setup, diffusion is consistently better than plain `mmse`.
+- Diffusion still loses to `mmse+prior` across all evaluated corpus/weight settings.
+- The gap to `mmse+prior` stays positive and stable, so this does not yet support a claim that diffusion is the best decoder on real text.
+- The next sensible direction is not another larger sweep, but a decode- or loss-level change that makes the diffusion model use the prior more directly.
