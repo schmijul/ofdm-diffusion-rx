@@ -834,12 +834,25 @@ Community note:
 <!-- FAIR_ADAPT_STATUS_START -->
 ### Live Adapt Status
 
-- Last update: `2026-04-02 08:48:55`
+- Last update: `2026-04-02 10:31:41`
 - Runner active: `yes`
 - Checkpoint present: `yes`
 - Run dir: `results/fair_followup_adapt`
 
-No benchmark summaries yet. Training or first benchmarks are still running.
+Current aggregated results (`summary_agg.csv`):
+
+| corpus | weight | n_runs | mmse | mmse+prior | diff | diff-mmse+prior |
+|---|---:|---:|---:|---:|---:|---:|
+| grundgesetz | 0.55 | 3 | 0.3252 | 0.2475 | 0.2659 | +0.0185 |
+| grundgesetz | 0.65 | 3 | 0.3252 | 0.2500 | 0.2655 | +0.0155 |
+| grundgesetz | 0.75 | 3 | 0.3252 | 0.2529 | 0.2685 | +0.0156 |
+| text8 | 0.55 | 3 | 0.3260 | 0.2464 | 0.2636 | +0.0172 |
+| text8 | 0.65 | 3 | 0.3260 | 0.2493 | 0.2648 | +0.0155 |
+| text8 | 0.75 | 3 | 0.3260 | 0.2525 | 0.2691 | +0.0167 |
+
+Current best (lowest `diff - mmse+prior`): `grundgesetz`, `w=0.65`, `delta=+0.0155`
+
+- Completed run files in `summary.csv`: `18`
 <!-- FAIR_ADAPT_STATUS_END -->
 
 ## Model Explore Branch Notes
@@ -865,3 +878,30 @@ Result:
 
 - None of the architectural variants beat `mmse+prior` in this smoke setting.
 - `residual_mlp` stayed the best of the three, so the new variants are not a clear next step for the full run.
+
+
+## Live Adapt Tune-A Status
+
+<!-- FAIR_ADAPT_TUNE_A_STATUS_START -->
+### Live Adapt Tune-A Status
+
+- Last update: `2026-04-04 08:13:57`
+- Runner active: `no`
+- Checkpoint present: `yes`
+- Run dir: `results/fair_followup_adapt_tune_a`
+
+Current aggregated results (`summary_agg.csv`):
+
+| corpus | weight | n_runs | mmse | mmse+prior | diff | diff-mmse+prior |
+|---|---:|---:|---:|---:|---:|---:|
+| grundgesetz | 0.55 | 3 | 0.3254 | 0.2471 | 0.2683 | +0.0212 |
+| grundgesetz | 0.65 | 3 | 0.3254 | 0.2498 | 0.2693 | +0.0195 |
+| grundgesetz | 0.75 | 3 | 0.3254 | 0.2527 | 0.2740 | +0.0213 |
+| text8 | 0.55 | 3 | 0.3266 | 0.2468 | 0.2675 | +0.0207 |
+| text8 | 0.65 | 3 | 0.3266 | 0.2496 | 0.2700 | +0.0204 |
+| text8 | 0.75 | 3 | 0.3266 | 0.2528 | 0.2764 | +0.0236 |
+
+Current best (lowest `diff - mmse+prior`): `grundgesetz`, `w=0.65`, `delta=+0.0195`
+
+- Completed run files in `summary.csv`: `18`
+<!-- FAIR_ADAPT_TUNE_A_STATUS_END -->

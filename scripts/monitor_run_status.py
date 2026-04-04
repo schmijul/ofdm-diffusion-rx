@@ -44,11 +44,15 @@ def read_summary(path: Path) -> list[dict]:
 
 def process_running(pattern: str) -> bool:
     out = subprocess.run(
-        ["/bin/bash", "-lc", f"ps -ef | rg '{pattern}' | rg -v rg"],
+        ["pgrep", "-af", pattern],
         capture_output=True,
         text=True,
     )
-    return bool(out.stdout.strip())
+    for line in out.stdout.splitlines():
+        if "monitor_run_status.py" in line or " /bin/bash " in line or " bash " in line:
+            continue
+        return True
+    return False
 
 
 def build_status_block(run_dir: Path, process_pattern: str, title: str, start_marker: str, end_marker: str) -> str:
