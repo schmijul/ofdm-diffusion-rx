@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import torch
 
 from src.classical_receiver import run_receiver_on_frame, simulate_received_frame
-from src.demapper import qam16_to_bits
+from src.demapper import qam16_to_bits_with_priors
 from src.diffusion.ddpm import DDPM
 from src.diffusion.model import build_denoiser_from_config, build_prior_context_from_config
 from src.diffusion.noise_schedule import NoiseSchedule
@@ -50,53 +50,6 @@ def parse_args():
     p.add_argument("--max-bytes", type=int, default=0, help="Optional cap on processed bytes (0 means full file)")
     p.add_argument("--start-byte", type=int, default=0, help="Optional byte offset into the file before slicing")
     return p.parse_args()
-
-
-def _qam16_map_bits_with_priors(symbols: torch.Tensor, bit_one_probs: list[float], prior_weight: float) -> torch.Tensor:
-    if prior_weight <= 0.0:
-        return qam16_to_bits(symbols).long()
-    if len(bit_one_probs) != 4:
-        return qam16_to_bits(symbols).long()
-
-    device = symbols.device
-    dtype = symbols.real.dtype
-    levels = torch.tensor([-3.0, -1.0, 1.0, 3.0], device=device, dtype=dtype) / (10.0**0.5)
-    grid_i, grid_q = torch.meshgrid(levels, levels, indexing="ij")
-    const = grid_i.reshape(-1) + 1j * grid_q.reshape(-1)
-
-    bits_lut = torch.tensor(
-        [
-            [0, 0, 0, 0],
-            [0, 0, 0, 1],
-            [0, 0, 1, 0],
-            [0, 0, 1, 1],
-            [0, 1, 0, 0],
-            [0, 1, 0, 1],
-            [0, 1, 1, 0],
-            [0, 1, 1, 1],
-            [1, 0, 0, 0],
-            [1, 0, 0, 1],
-            [1, 0, 1, 0],
-            [1, 0, 1, 1],
-            [1, 1, 0, 0],
-            [1, 1, 0, 1],
-            [1, 1, 1, 0],
-            [1, 1, 1, 1],
-        ],
-        device=device,
-        dtype=torch.long,
-    )
-
-    probs = torch.tensor(bit_one_probs, device=device, dtype=dtype).clamp(1e-4, 1.0 - 1e-4)
-    logp1 = torch.log(probs).unsqueeze(0)
-    logp0 = torch.log(1.0 - probs).unsqueeze(0)
-    bits_lut_f = bits_lut.to(dtype=dtype)
-    log_prior = torch.sum(bits_lut_f * logp1 + (1.0 - bits_lut_f) * logp0, dim=1)
-
-    dist2 = torch.abs(symbols.unsqueeze(1) - const.unsqueeze(0)).pow(2)
-    score = dist2 - prior_weight * log_prior.unsqueeze(0)
-    best = torch.argmin(score, dim=1)
-    return bits_lut[best].reshape(-1).long()
 
 
 def snr_grid(cfg: dict) -> list[float]:
@@ -138,13 +91,15 @@ def load_diffusion(cfg: dict, checkpoint: Path, device: torch.device):
     )
 
 
-def plot_metric(rows: list[dict], key_mmse: str, key_diff: str, ylabel: str, title: str, out_png: Path, out_pdf: Path):
+def plot_metric(rows: list[dict], key_mmse: str, key_mmse_prior: str, key_diff: str, ylabel: str, title: str, out_png: Path, out_pdf: Path):
     snr = [float(r["snr_db"]) for r in rows]
     mmse = [float(r[key_mmse]) for r in rows]
+    mmse_prior = [float(r[key_mmse_prior]) for r in rows]
     diff = [float(r[key_diff]) for r in rows]
 
     plt.figure(figsize=(7, 4.6))
     plt.plot(snr, mmse, marker="s", label="LS+MMSE")
+    plt.plot(snr, mmse_prior, marker="o", label="LS+MMSE+prior")
     plt.plot(snr, diff, marker="d", label="Diffusion+MMSE")
     plt.xlabel("SNR [dB]")
     plt.ylabel(ylabel)
@@ -223,7 +178,7 @@ def main():
             tx_all.append(out_mmse["bits_tx"].long())
             mmse_all.append(out_mmse["bits_rx"].long())
             mmse_prior_all.append(
-                _qam16_map_bits_with_priors(
+                qam16_to_bits_with_priors(
                     out_mmse["equalized_symbols"],
                     bit_one_probs=bit_pos_priors if isinstance(bit_pos_priors, list) else [],
                     prior_weight=float(args.mmse_prior_weight),
@@ -237,7 +192,7 @@ def main():
                 with torch.no_grad():
                     x_dn = ddpm.denoise_from_equalized(x_eq_real, snr_tensor)
                 x_dn_complex = real_to_complex(x_dn.cpu())
-                bits_dn = _qam16_map_bits_with_priors(
+                bits_dn = qam16_to_bits_with_priors(
                     x_dn_complex,
                     bit_one_probs=bit_pos_priors if isinstance(bit_pos_priors, list) else [],
                     prior_weight=float(args.diff_prior_weight),
@@ -344,6 +299,7 @@ def main():
     plot_metric(
         rows,
         key_mmse="mmse_ber",
+        key_mmse_prior="mmse_prior_ber",
         key_diff="diff_ber",
         ylabel="BER",
         title="Text Transmission BER vs SNR",
@@ -353,6 +309,7 @@ def main():
     plot_metric(
         rows,
         key_mmse="mmse_byte_error",
+        key_mmse_prior="mmse_prior_byte_error",
         key_diff="diff_byte_error",
         ylabel="Byte Error Rate",
         title="Text Transmission Byte Error vs SNR",

@@ -51,14 +51,24 @@ def summarize_delta_curve(rows: list[dict]) -> dict:
 
     deltas = [_extract_delta(row) for row in rows]
     snrs = [float(row["snr_db"]) for row in rows]
-    return {
+    summary = {
         "snr_min_db": min(snrs),
         "snr_max_db": max(snrs),
         "avg_delta": sum(deltas) / len(deltas),
         "best_delta": min(deltas),
         "worst_delta": max(deltas),
         "n_snrs": len(deltas),
+        "n_diffusion_wins": sum(1 for value in deltas if value < 0.0),
     }
+
+    if all(row.get("ls_mmse_mean", "") != "" and row.get("diffusion_mmse_mean", "") != "" for row in rows):
+        avg_mmse = sum(float(row["ls_mmse_mean"]) for row in rows) / len(rows)
+        avg_diffusion = sum(float(row["diffusion_mmse_mean"]) for row in rows) / len(rows)
+        summary["avg_mmse"] = avg_mmse
+        summary["avg_diffusion"] = avg_diffusion
+        summary["avg_relative_ber_reduction_pct"] = 100.0 * (avg_mmse - avg_diffusion) / avg_mmse
+
+    return summary
 
 
 def linear_slope(xs: list[float], ys: list[float]) -> float:

@@ -49,7 +49,12 @@ def test_normalize_unique_bit_priors_sorts_and_deduplicates():
 def test_summarize_delta_curve_extracts_key_stats(tmp_path):
     csv_path = tmp_path / "benchmark_summary.csv"
     csv_path.write_text(
-        "snr_db,delta_diff_minus_mmse_mean\n0,-0.05\n4,-0.03\n8,0.01\n",
+        (
+            "snr_db,ls_mmse_mean,diffusion_mmse_mean,delta_diff_minus_mmse_mean\n"
+            "0,0.40,0.35,-0.05\n"
+            "4,0.30,0.27,-0.03\n"
+            "8,0.20,0.21,0.01\n"
+        ),
         encoding="utf-8",
     )
 
@@ -62,6 +67,10 @@ def test_summarize_delta_curve_extracts_key_stats(tmp_path):
     assert summary["best_delta"] == -0.05
     assert summary["worst_delta"] == 0.01
     assert summary["n_snrs"] == 3
+    assert summary["n_diffusion_wins"] == 2
+    assert abs(summary["avg_mmse"] - 0.30) < 1e-9
+    assert abs(summary["avg_diffusion"] - (0.83 / 3.0)) < 1e-9
+    assert abs(summary["avg_relative_ber_reduction_pct"] - (100.0 * (0.90 - 0.83) / 0.90)) < 1e-9
 
 
 def test_summarize_delta_curve_accepts_alias_column(tmp_path):

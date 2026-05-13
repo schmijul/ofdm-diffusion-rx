@@ -39,3 +39,52 @@ def qam16_to_bits(symbols: torch.Tensor) -> torch.Tensor:
     bits[:, 2] = (q_idx // 2)
     bits[:, 3] = (q_idx % 2)
     return bits.reshape(-1)
+
+
+def qam16_to_bits_with_priors(
+    symbols: torch.Tensor,
+    bit_one_probs: list[float] | tuple[float, ...],
+    prior_weight: float,
+) -> torch.Tensor:
+    if prior_weight <= 0.0 or len(bit_one_probs) != 4:
+        return qam16_to_bits(symbols).long()
+
+    device = symbols.device
+    dtype = symbols.real.dtype
+    levels = _AXIS_LEVELS.to(device=device, dtype=dtype) / (10.0**0.5)
+    grid_i, grid_q = torch.meshgrid(levels, levels, indexing="ij")
+    const = grid_i.reshape(-1) + 1j * grid_q.reshape(-1)
+
+    bits_lut = torch.tensor(
+        [
+            [0, 0, 0, 0],
+            [0, 0, 0, 1],
+            [0, 0, 1, 0],
+            [0, 0, 1, 1],
+            [0, 1, 0, 0],
+            [0, 1, 0, 1],
+            [0, 1, 1, 0],
+            [0, 1, 1, 1],
+            [1, 0, 0, 0],
+            [1, 0, 0, 1],
+            [1, 0, 1, 0],
+            [1, 0, 1, 1],
+            [1, 1, 0, 0],
+            [1, 1, 0, 1],
+            [1, 1, 1, 0],
+            [1, 1, 1, 1],
+        ],
+        device=device,
+        dtype=torch.long,
+    )
+
+    probs = torch.tensor(bit_one_probs, device=device, dtype=dtype).clamp(1e-4, 1.0 - 1e-4)
+    logp1 = torch.log(probs).unsqueeze(0)
+    logp0 = torch.log(1.0 - probs).unsqueeze(0)
+    bits_lut_f = bits_lut.to(dtype=dtype)
+    log_prior = torch.sum(bits_lut_f * logp1 + (1.0 - bits_lut_f) * logp0, dim=1)
+
+    dist2 = torch.abs(symbols.unsqueeze(1) - const.unsqueeze(0)).pow(2)
+    score = dist2 - prior_weight * log_prior.unsqueeze(0)
+    best = torch.argmin(score, dim=1)
+    return bits_lut[best].reshape(-1).long()
